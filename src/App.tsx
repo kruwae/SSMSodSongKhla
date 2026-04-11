@@ -15,6 +15,7 @@ type AttendanceRow = {
 }
 
 type SignInStep = 'idle' | 'face' | 'location' | 'deviceCode' | 'submitting' | 'success' | 'error'
+type DeviceStatus = 'unregistered' | 'pending' | 'approved'
 type AdminTab = 'dashboard' | 'devices' | 'permissions'
 
 const stats: StatCard[] = [
@@ -31,7 +32,29 @@ const attendanceRows: AttendanceRow[] = [
   { name: 'อาทิตย์ มั่นคง', status: 'กลับก่อนเวลา', time: '15:10', department: 'งานบุคคล' },
 ]
 
-const adminNavItems: { key: AdminTab; label: string }[] = []
+type RegisteredDevice = {
+  id: string
+  name: string
+  imei: string
+  owner: string
+  gpsEnabled: boolean
+  scanEnabled: boolean
+  approved: boolean
+}
+
+const storedDeviceSeed = {
+  imei: '123456',
+  name: 'มือถือเจ้าหน้าที่เวรเช้า',
+  owner: 'สุภาวดี แสงทอง',
+  gpsEnabled: true,
+  scanEnabled: true,
+}
+
+const adminNavItems: { key: AdminTab; label: string }[] = [
+  { key: 'dashboard', label: 'ภาพรวม' },
+  { key: 'devices', label: 'ลงทะเบียนอุปกรณ์' },
+  { key: 'permissions', label: 'แยกระบบสิทธิ์' },
+]
 
 const SCHOOL_LAT = 6.56405379821
 const SCHOOL_LNG = 101.38833639069
@@ -60,12 +83,16 @@ function App() {
   const [faceVerified, setFaceVerified] = useState(false)
   const [locationVerified, setLocationVerified] = useState(false)
   const [deviceVerified, setDeviceVerified] = useState(false)
-  const [deviceCode] = useState('123456')
+  const [deviceStatus, setDeviceStatus] = useState<DeviceStatus>('unregistered')
   const [deviceInput, setDeviceInput] = useState('')
   const [gpsMessage, setGpsMessage] = useState('ยังไม่ได้ตรวจจับตำแหน่ง')
   const [distanceMeters, setDistanceMeters] = useState<number | null>(null)
   const [gpsPrecision, setGpsPrecision] = useState<'12-digit' | '6-digit'>('12-digit')
   const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number } | null>(null)
+  const [registeredDevice, setRegisteredDevice] = useState<RegisteredDevice | null>(null)
+  const [deviceApprovalMessage, setDeviceApprovalMessage] = useState('ยังไม่ได้ลงทะเบียนอุปกรณ์')
+  const [deviceChangePending, setDeviceChangePending] = useState(false)
+  const [adminApprovalGranted, setAdminApprovalGranted] = useState(false)
 
   const today = useMemo(() => {
     return new Date().toLocaleDateString('th-TH', {
@@ -97,6 +124,91 @@ function App() {
     setCurrentCoords(null)
     setCameraMessage('กดปุ่มเพื่อเริ่มสแกนใบหน้า')
     stopCamera()
+  }
+
+  const captureDeviceFingerprint = () => ({
+    imei: storedDeviceSeed.imei,
+    name: storedDeviceSeed.name,
+    owner: storedDeviceSeed.owner,
+    gpsEnabled: storedDeviceSeed.gpsEnabled,
+    scanEnabled: storedDeviceSeed.scanEnabled,
+  })
+
+  const registerDevice = () => {
+    const fingerprint = captureDeviceFingerprint()
+    const newDevice: RegisteredDevice = {
+      id: `DEV-${Date.now()}`,
+      ...fingerprint,
+      approved: true,
+    }
+    setRegisteredDevice(newDevice)
+    setDeviceStatus('approved')
+    setDeviceVerified(true)
+    setDeviceChangePending(false)
+    setAdminApprovalGranted(false)
+    setDeviceApprovalMessage(`บันทึกอุปกรณ์เริ่มต้นแล้ว: ${newDevice.name} (${newDevice.imei})`)
+    setCameraMessage('ลงทะเบียนอุปกรณ์สำเร็จ และตั้งเป็นค่าเริ่มต้นของบัญชีนี้')
+  }
+
+  const requestDeviceVerification = () => {
+    const input = deviceInput.trim()
+    if (!input) {
+      setDeviceVerified(false)
+      setCameraMessage('กรุณากรอกรหัสโทรศัพท์/รหัสเครื่อง')
+      return
+    }
+
+    const currentDevice = registeredDevice ?? null
+    if (!currentDevice) {
+      setDeviceVerified(false)
+      setDeviceStatus('unregistered')
+      setDeviceApprovalMessage('ยังไม่พบอุปกรณ์ที่ลงทะเบียน')
+      setCameraMessage('กรุณาลงทะเบียนอุปกรณ์ก่อน')
+      return
+    }
+
+    if (input === currentDevice.imei) {
+      setDeviceVerified(true)
+      setDeviceStatus('approved')
+      setDeviceChangePending(false)
+      setDeviceApprovalMessage('อุปกรณ์ตรงกับที่ลงทะเบียนไว้ ใช้งานได้')
+      setSignInStep('submitting')
+      setCameraMessage('ตรวจสอบอุปกรณ์ผ่านแล้ว กำลังส่งลงชื่อเข้าใช้งาน...')
+      setTimeout(() => {
+        setCameraStatus('active')
+        setCheckedIn((current) => current + 1)
+        setSignInStep('success')
+        setCameraMessage('ลงชื่อสำเร็จ')
+      }, 800)
+      return
+    }
+
+    setDeviceVerified(false)
+    setDeviceStatus('pending')
+    setDeviceChangePending(true)
+    setDeviceApprovalMessage('ตรวจพบการเปลี่ยนแปลงอุปกรณ์ ต้องให้แอดมินยืนยันก่อน')
+    setSignInStep('error')
+    setCameraMessage('อุปกรณ์ไม่ตรงกับที่ลงทะเบียนไว้ รอแอดมินยืนยัน')
+  }
+
+  const approveDeviceChange = () => {
+    const input = deviceInput.trim()
+    if (!input) return
+    setAdminApprovalGranted(true)
+    setDeviceStatus('approved')
+    setDeviceVerified(true)
+    setDeviceChangePending(false)
+    setDeviceApprovalMessage('แอดมินยืนยันการเปลี่ยนแปลงอุปกรณ์แล้ว')
+    setCameraMessage('แอดมินอนุมัติอุปกรณ์ สามารถลงชื่อได้')
+    setRegisteredDevice((current) =>
+      current
+        ? {
+            ...current,
+            imei: input,
+            approved: true,
+          }
+        : current,
+    )
   }
 
   useEffect(() => {
@@ -188,28 +300,7 @@ function App() {
   }
 
   const verifyDeviceCode = () => {
-    const input = deviceInput.trim()
-    if (!input) {
-      setDeviceVerified(false)
-      setCameraMessage('กรุณากรอกรหัสโทรศัพท์/รหัสเครื่อง')
-      return
-    }
-
-    if (input === deviceCode) {
-      setDeviceVerified(true)
-      setSignInStep('submitting')
-      setCameraMessage('ตรวจสอบรหัสผ่านแล้ว กำลังส่งลงชื่อเข้าใช้งาน...')
-      setTimeout(() => {
-        setCameraStatus('active')
-        setCheckedIn((current) => current + 1)
-        setSignInStep('success')
-        setCameraMessage('ลงชื่อสำเร็จ')
-      }, 800)
-    } else {
-      setDeviceVerified(false)
-      setSignInStep('error')
-      setCameraMessage('รหัสโทรศัพท์/รหัสเครื่องไม่ถูกต้อง')
-    }
+    requestDeviceVerification()
   }
 
   return (
@@ -358,13 +449,17 @@ function App() {
               <button
                 type="button"
                 className="secondary-button"
-                onClick={() => {
-                  if (!deviceVerified) {
-                    setDeviceInput('')
-                  }
-                }}
+                onClick={registerDevice}
               >
                 ลงทะเบียนอุปกรณ์
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={approveDeviceChange}
+                disabled={!deviceChangePending || !deviceInput.trim() || !deviceInput.trim().length}
+              >
+                แอดมินยืนยันอุปกรณ์
               </button>
               <button type="button" className="secondary-button" onClick={resetFlow}>
                 รีเซ็ตฟลูว์
@@ -404,9 +499,14 @@ function App() {
               </button>
               <p className="helper-text">
                 {signInStep === 'deviceCode'
-                  ? 'กรอกรหัสอุปกรณ์/IMEI ที่ลงทะเบียนไว้ หากยังไม่ลงทะเบียนให้กดปุ่มลงทะเบียนอุปกรณ์ก่อน'
+                  ? 'กรอกรหัสอุปกรณ์/IMEI ที่ลงทะเบียนไว้ หากไม่ตรงกับอุปกรณ์เดิม ระบบจะขึ้นสถานะรอแอดมินยืนยัน'
                   : 'ต้องผ่านใบหน้าและ GPS ก่อนจึงจะกรอกรหัสอุปกรณ์ได้'}
               </p>
+            </div>
+
+            <div className="info-card">
+              <p><strong>สถานะอุปกรณ์:</strong> {deviceApprovalMessage}</p>
+              <p><strong>สถานะอนุมัติ:</strong> {adminApprovalGranted ? 'แอดมินยืนยันแล้ว' : deviceChangePending ? 'รอยืนยันจากแอดมิน' : 'พร้อมใช้งาน'}</p>
             </div>
 
             <p className="helper-text">{cameraMessage}</p>
