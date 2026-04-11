@@ -61,6 +61,7 @@ function App() {
   const [deviceInput, setDeviceInput] = useState('')
   const [gpsMessage, setGpsMessage] = useState('ยังไม่ได้ตรวจจับตำแหน่ง')
   const [distanceMeters, setDistanceMeters] = useState<number | null>(null)
+  const [gpsPrecision, setGpsPrecision] = useState<'12-digit' | '6-digit'>('12-digit')
   const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number } | null>(null)
 
   const today = useMemo(() => {
@@ -159,15 +160,16 @@ function App() {
 
         setCurrentCoords({ lat, lng })
         setDistanceMeters(meters)
+        setGpsPrecision(position.coords.accuracy <= 10 ? '12-digit' : '6-digit')
 
         if (meters <= MAX_DISTANCE_METERS) {
           setLocationVerified(true)
-          setGpsMessage(`ผ่าน GPS: อยู่ห่าง ${meters.toFixed(1)} เมตร`)
+          setGpsMessage(`ผ่าน GPS: อยู่ห่าง ${meters.toFixed(1)} เมตร | พิกัด ${lat.toFixed(12)}, ${lng.toFixed(12)}`)
           setSignInStep('deviceCode')
           setCameraMessage('ผ่าน GPS แล้ว กรุณากรอกรหัสโทรศัพท์/รหัสเครื่องที่ลงทะเบียน')
         } else {
           setLocationVerified(false)
-          setGpsMessage(`ไม่ผ่าน GPS: อยู่ห่าง ${meters.toFixed(1)} เมตร เกิน ${MAX_DISTANCE_METERS} เมตร`)
+          setGpsMessage(`ไม่ผ่าน GPS: อยู่ห่าง ${meters.toFixed(1)} เมตร เกิน ${MAX_DISTANCE_METERS} เมตร | พิกัด ${lat.toFixed(12)}, ${lng.toFixed(12)}`)
           setSignInStep('error')
           setCameraMessage('ตรวจ GPS ไม่ผ่าน')
         }
@@ -262,6 +264,36 @@ function App() {
           ))}
         </section>
 
+        <section className="panel action-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Action</p>
+              <h3>กดปุ่มนี้เพื่อเริ่มลงชื่อเข้าทำงาน</h3>
+            </div>
+          </div>
+          <div className="panel-actions">
+            <button
+              type="button"
+              className="primary-button"
+              onClick={startCamera}
+              disabled={cameraStatus === 'starting'}
+            >
+              เปิดกล้องสำหรับลงชื่อเข้าทำงาน
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={captureFace}
+              disabled={signInStep !== 'face' || cameraStatus !== 'active'}
+            >
+              ลงชื่อเข้าทำงาน
+            </button>
+          </div>
+          <p className="helper-text">
+            เมื่อเปิดกล้องแล้ว ระบบจะตรวจใบหน้า + GPS + IMEI ของอุปกรณ์ตามลำดับ
+          </p>
+        </section>
+
         <section className="content-grid">
           <article id="sign-in" className="panel sign-in-panel">
             <div className="panel-heading">
@@ -304,11 +336,32 @@ function App() {
             </div>
 
             <div className="panel-actions">
-              <button type="button" className="primary-button" onClick={startCamera} disabled={cameraStatus === 'starting' || signInStep === 'submitting'}>
-                {cameraStatus === 'starting' ? 'กำลังเปิดกล้อง...' : faceVerified ? 'สแกนใบหน้าผ่านแล้ว' : 'Start Face Scan'}
+              <button
+                type="button"
+                className="primary-button"
+                onClick={startCamera}
+                disabled={cameraStatus === 'starting' || signInStep === 'submitting'}
+              >
+                {cameraStatus === 'starting' ? 'กำลังเปิดกล้อง...' : 'เปิดกล้องสำหรับลงชื่อเข้าใช้'}
               </button>
-              <button type="button" className="secondary-button" onClick={captureFace} disabled={signInStep !== 'face' || cameraStatus !== 'active'}>
-                ผ่านใบหน้า
+              <button
+                type="button"
+                className="primary-button"
+                onClick={captureFace}
+                disabled={signInStep !== 'face' || cameraStatus !== 'active'}
+              >
+                ลงชื่อเข้าทำงาน
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => {
+                  if (!deviceVerified) {
+                    setDeviceInput('')
+                  }
+                }}
+              >
+                ลงทะเบียนอุปกรณ์
               </button>
               <button type="button" className="secondary-button" onClick={resetFlow}>
                 รีเซ็ตฟลูว์
@@ -318,23 +371,24 @@ function App() {
             <div className="checklist">
               <div className={faceVerified ? 'check done' : 'check'}>✓ ใบหน้า</div>
               <div className={locationVerified ? 'check done' : 'check'}>✓ GPS</div>
-              <div className={deviceVerified ? 'check done' : 'check'}>✓ รหัสโทรศัพท์/เครื่อง</div>
+              <div className={deviceVerified ? 'check done' : 'check'}>✓ IMEI / รหัสอุปกรณ์</div>
             </div>
 
             <div className="info-card">
               <p><strong>สถานะ GPS:</strong> {gpsMessage}</p>
               <p><strong>ระยะ:</strong> {distanceMeters !== null ? `${distanceMeters.toFixed(1)} เมตร` : '-'}</p>
-              <p><strong>พิกัด:</strong> {currentCoords ? `${currentCoords.lat.toFixed(6)}, ${currentCoords.lng.toFixed(6)}` : '-'}</p>
+              <p><strong>พิกัด 12 ตำแหน่ง:</strong> {currentCoords ? `${currentCoords.lat.toFixed(12)}, ${currentCoords.lng.toFixed(12)}` : '-'}</p>
+              <p><strong>ความละเอียด:</strong> {gpsPrecision}</p>
             </div>
 
             <div className="device-code-box">
-              <label htmlFor="device-code">รหัสโทรศัพท์ / รหัสเครื่องที่ลงทะเบียน</label>
+              <label htmlFor="device-code">IMEI / รหัสอุปกรณ์ที่ลงทะเบียน</label>
               <input
                 id="device-code"
                 type="text"
                 value={deviceInput}
                 onChange={(event) => setDeviceInput(event.target.value)}
-                placeholder="กรอกรหัสโทรศัพท์หรือรหัสเครื่อง"
+                placeholder="กรอก IMEI หรือรหัสอุปกรณ์"
                 disabled={signInStep !== 'deviceCode'}
               />
               <button
@@ -343,12 +397,12 @@ function App() {
                 onClick={verifyDeviceCode}
                 disabled={signInStep !== 'deviceCode' || !deviceInput.trim()}
               >
-                ยืนยันรหัส
+                ยืนยันอุปกรณ์
               </button>
               <p className="helper-text">
                 {signInStep === 'deviceCode'
-                  ? 'กรอกรหัสโทรศัพท์/เครื่องที่ลงทะเบียนไว้เพื่อยืนยันตัวตน'
-                  : 'ต้องผ่านใบหน้าและ GPS ก่อนจึงจะกรอกรหัสได้'}
+                  ? 'กรอกรหัสอุปกรณ์/IMEI ที่ลงทะเบียนไว้ หากยังไม่ลงทะเบียนให้กดปุ่มลงทะเบียนอุปกรณ์ก่อน'
+                  : 'ต้องผ่านใบหน้าและ GPS ก่อนจึงจะกรอกรหัสอุปกรณ์ได้'}
               </p>
             </div>
 
