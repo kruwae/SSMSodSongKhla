@@ -15,8 +15,6 @@ type AttendanceRow = {
 }
 
 type SignInStep = 'idle' | 'face' | 'location' | 'deviceCode' | 'submitting' | 'success' | 'error'
-type DeviceStatus = 'unregistered' | 'pending' | 'approved'
-type AdminTab = 'dashboard' | 'devices' | 'permissions'
 
 const stats: StatCard[] = [
   { label: 'ผู้ลงทะเบียนวันนี้', value: '128', delta: '+12 จากเมื่อวาน' },
@@ -52,11 +50,6 @@ const storedDeviceSeed = {
   scanEnabled: true,
 }
 
-const adminNavItems: { key: AdminTab; label: string }[] = [
-  { key: 'dashboard', label: 'ภาพรวม' },
-  { key: 'devices', label: 'ลงทะเบียนอุปกรณ์' },
-  { key: 'permissions', label: 'แยกระบบสิทธิ์' },
-]
 
 const SCHOOL_LAT = 6.56405379821
 const SCHOOL_LNG = 101.38833639069
@@ -86,7 +79,6 @@ function App() {
   const [faceVerified, setFaceVerified] = useState(false)
   const [locationVerified, setLocationVerified] = useState(false)
   const [deviceVerified, setDeviceVerified] = useState(false)
-  const [deviceStatus, setDeviceStatus] = useState<DeviceStatus>('unregistered')
   const [deviceInput, setDeviceInput] = useState('')
   const [serviceUnit, setServiceUnit] = useState('')
   const [gpsMessage, setGpsMessage] = useState('ยังไม่ได้ตรวจจับตำแหน่ง')
@@ -153,7 +145,6 @@ function App() {
       approved: true,
     }
     setRegisteredDevice(newDevice)
-    setDeviceStatus('approved')
     setDeviceVerified(true)
     setDeviceChangePending(false)
     setAdminApprovalGranted(false)
@@ -173,7 +164,6 @@ function App() {
 
     if (!registeredDevice) {
       setDeviceVerified(false)
-      setDeviceStatus('unregistered')
       setDeviceApprovalMessage('ยังไม่ลงทะเบียนอุปกรณ์ กรุณาลงทะเบียนอุปกรณ์ก่อน')
       setCameraMessage('ต้องลงทะเบียนอุปกรณ์ก่อนจึงจะลงชื่อทำงานได้')
       return
@@ -182,7 +172,6 @@ function App() {
     const currentDevice = registeredDevice ?? null
     if (!currentDevice) {
       setDeviceVerified(false)
-      setDeviceStatus('unregistered')
       setDeviceApprovalMessage('ยังไม่พบอุปกรณ์ที่ลงทะเบียน')
       setCameraMessage('กรุณาลงทะเบียนอุปกรณ์ก่อน')
       return
@@ -190,7 +179,6 @@ function App() {
 
     if (input === currentDevice.imei) {
       setDeviceVerified(true)
-      setDeviceStatus('approved')
       setDeviceChangePending(false)
       setDeviceApprovalMessage('อุปกรณ์ตรงกับที่ลงทะเบียนไว้ ใช้งานได้')
       setSignInStep('submitting')
@@ -205,7 +193,6 @@ function App() {
     }
 
     setDeviceVerified(false)
-    setDeviceStatus('pending')
     setDeviceChangePending(true)
     setDeviceApprovalMessage(
       `อุปกรณ์ไม่ตรงกับที่ลงทะเบียนไว้ | หน่วยบริการเดิม: ${registeredDevice.serviceUnit} | รอแอดมินยืนยัน`,
@@ -218,7 +205,6 @@ function App() {
     const input = deviceInput.trim()
     if (!input) return
     setAdminApprovalGranted(true)
-    setDeviceStatus('approved')
     setDeviceVerified(true)
     setDeviceChangePending(false)
     setDeviceApprovalMessage('แอดมินยืนยันการเปลี่ยนแปลงอุปกรณ์แล้ว')
