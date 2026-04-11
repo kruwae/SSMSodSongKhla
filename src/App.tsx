@@ -15,6 +15,7 @@ type AttendanceRow = {
 }
 
 type SignInStep = 'idle' | 'face' | 'location' | 'deviceCode' | 'submitting' | 'success' | 'error'
+type AdminTab = 'dashboard' | 'devices' | 'permissions'
 
 const stats: StatCard[] = [
   { label: 'ผู้ลงทะเบียนวันนี้', value: '128', delta: '+12 จากเมื่อวาน' },
@@ -30,8 +31,10 @@ const attendanceRows: AttendanceRow[] = [
   { name: 'อาทิตย์ มั่นคง', status: 'กลับก่อนเวลา', time: '15:10', department: 'งานบุคคล' },
 ]
 
-const SCHOOL_LAT = 6.564053798210499
-const SCHOOL_LNG = 101.38833639069346
+const adminNavItems: { key: AdminTab; label: string }[] = []
+
+const SCHOOL_LAT = 6.56405379821
+const SCHOOL_LNG = 101.38833639069
 const MAX_DISTANCE_METERS = 20
 
 function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number) {
