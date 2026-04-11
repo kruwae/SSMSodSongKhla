@@ -58,7 +58,8 @@ const adminNavItems: { key: AdminTab; label: string }[] = [
 
 const SCHOOL_LAT = 6.56405379821
 const SCHOOL_LNG = 101.38833639069
-const MAX_DISTANCE_METERS = 20
+const MAX_DISTANCE_METERS = 70
+const MIN_ACCURACY_METERS = 100
 
 function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number) {
   const toRad = (value: number) => (value * Math.PI) / 180
@@ -263,6 +264,7 @@ function App() {
     if (!navigator.geolocation) {
       setGpsMessage('อุปกรณ์นี้ไม่รองรับ GPS')
       setSignInStep('error')
+      setCameraMessage('ตรวจ GPS ไม่ผ่าน: อุปกรณ์ไม่รองรับตำแหน่ง')
       return
     }
 
@@ -271,29 +273,53 @@ function App() {
       (position) => {
         const lat = position.coords.latitude
         const lng = position.coords.longitude
+        const accuracy = position.coords.accuracy
         const meters = haversineMeters(lat, lng, SCHOOL_LAT, SCHOOL_LNG)
 
         setCurrentCoords({ lat, lng })
         setDistanceMeters(meters)
-        setGpsPrecision(position.coords.accuracy <= 10 ? '12-digit' : '6-digit')
+        setGpsPrecision(accuracy <= 10 ? '12-digit' : '6-digit')
+
+        if (accuracy > MIN_ACCURACY_METERS) {
+          setLocationVerified(false)
+          setGpsMessage(
+            `พิกัดยังไม่นิ่งพอ (accuracy ${accuracy.toFixed(1)}m) | พิกัด ${lat.toFixed(12)}, ${lng.toFixed(12)}`,
+          )
+          setSignInStep('error')
+          setCameraMessage('ตรวจ GPS ไม่ผ่าน: ความแม่นยำของพิกัดยังไม่พอ')
+          return
+        }
 
         if (meters <= MAX_DISTANCE_METERS) {
           setLocationVerified(true)
-          setGpsMessage(`ผ่าน GPS: อยู่ห่าง ${meters.toFixed(1)} เมตร | พิกัด ${lat.toFixed(12)}, ${lng.toFixed(12)}`)
+          setGpsMessage(
+            `ผ่าน GPS: อยู่ห่าง ${meters.toFixed(1)} เมตร | accuracy ${accuracy.toFixed(1)}m | พิกัด ${lat.toFixed(12)}, ${lng.toFixed(12)}`,
+          )
           setSignInStep('deviceCode')
           setCameraMessage('ผ่าน GPS แล้ว กรุณากรอกรหัสโทรศัพท์/รหัสเครื่องที่ลงทะเบียน')
         } else {
           setLocationVerified(false)
-          setGpsMessage(`ไม่ผ่าน GPS: อยู่ห่าง ${meters.toFixed(1)} เมตร เกิน ${MAX_DISTANCE_METERS} เมตร | พิกัด ${lat.toFixed(12)}, ${lng.toFixed(12)}`)
+          setGpsMessage(
+            `ไม่ผ่าน GPS: อยู่ห่าง ${meters.toFixed(1)} เมตร เกิน ${MAX_DISTANCE_METERS} เมตร | accuracy ${accuracy.toFixed(1)}m | พิกัด ${lat.toFixed(12)}, ${lng.toFixed(12)}`,
+          )
           setSignInStep('error')
-          setCameraMessage('ตรวจ GPS ไม่ผ่าน')
+          setCameraMessage('ตรวจ GPS ไม่ผ่าน: พิกัดอยู่นอกพื้นที่กำหนด')
         }
       },
       (error) => {
-        setGpsMessage(error.message || 'ไม่สามารถดึงตำแหน่งได้')
+        const reason =
+          error.code === error.PERMISSION_DENIED
+            ? 'ไม่ได้อนุญาตให้เข้าถึงตำแหน่ง'
+            : error.code === error.POSITION_UNAVAILABLE
+              ? 'ไม่สามารถระบุตำแหน่งได้'
+              : error.code === error.TIMEOUT
+                ? 'หมดเวลารอข้อมูลตำแหน่ง'
+                : error.message || 'ไม่สามารถดึงตำแหน่งได้'
+
+        setGpsMessage(`ตรวจ GPS ไม่ผ่าน: ${reason}`)
         setLocationVerified(false)
         setSignInStep('error')
-        setCameraMessage('ตรวจ GPS ไม่ผ่าน')
+        setCameraMessage(`ตรวจ GPS ไม่ผ่าน: ${reason}`)
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
     )
@@ -413,7 +439,7 @@ function App() {
               </div>
               <div className={`step ${(signInStep === 'location' || locationVerified || deviceVerified) ? 'done' : ''}`}>
                 <strong>2</strong>
-                <span>ตรวจ GPS ≤ 20 ม.</span>
+                <span>ตรวจ GPS ≤ 70 ม.</span>
               </div>
               <div className={`step ${deviceVerified ? 'done' : ''}`}>
                 <strong>3</strong>
