@@ -37,6 +37,7 @@ type RegisteredDevice = {
   name: string
   imei: string
   owner: string
+  serviceUnit: string
   gpsEnabled: boolean
   scanEnabled: boolean
   approved: boolean
@@ -46,6 +47,7 @@ const storedDeviceSeed = {
   imei: '123456',
   name: 'มือถือเจ้าหน้าที่เวรเช้า',
   owner: 'สุภาวดี แสงทอง',
+  serviceUnit: 'หน่วยบริการ A',
   gpsEnabled: true,
   scanEnabled: true,
 }
@@ -86,6 +88,7 @@ function App() {
   const [deviceVerified, setDeviceVerified] = useState(false)
   const [deviceStatus, setDeviceStatus] = useState<DeviceStatus>('unregistered')
   const [deviceInput, setDeviceInput] = useState('')
+  const [serviceUnit, setServiceUnit] = useState('')
   const [gpsMessage, setGpsMessage] = useState('ยังไม่ได้ตรวจจับตำแหน่ง')
   const [distanceMeters, setDistanceMeters] = useState<number | null>(null)
   const [gpsPrecision, setGpsPrecision] = useState<'12-digit' | '6-digit'>('12-digit')
@@ -131,12 +134,19 @@ function App() {
     imei: storedDeviceSeed.imei,
     name: storedDeviceSeed.name,
     owner: storedDeviceSeed.owner,
+    serviceUnit: storedDeviceSeed.serviceUnit,
     gpsEnabled: storedDeviceSeed.gpsEnabled,
     scanEnabled: storedDeviceSeed.scanEnabled,
   })
 
   const registerDevice = () => {
     const fingerprint = captureDeviceFingerprint()
+    if (!serviceUnit.trim()) {
+      setDeviceApprovalMessage('กรุณาระบุหน่วยบริการก่อนลงทะเบียนอุปกรณ์')
+      setCameraMessage('ต้องระบุหน่วยบริการก่อนจึงจะลงทะเบียนอุปกรณ์ได้')
+      return
+    }
+
     const newDevice: RegisteredDevice = {
       id: `DEV-${Date.now()}`,
       ...fingerprint,
@@ -147,7 +157,9 @@ function App() {
     setDeviceVerified(true)
     setDeviceChangePending(false)
     setAdminApprovalGranted(false)
-    setDeviceApprovalMessage(`บันทึกอุปกรณ์เริ่มต้นแล้ว: ${newDevice.name} (${newDevice.imei})`)
+    setDeviceApprovalMessage(
+      `บันทึกอุปกรณ์เริ่มต้นแล้ว: ${newDevice.name} (${newDevice.imei}) | หน่วยบริการ: ${serviceUnit.trim()}`,
+    )
     setCameraMessage('ลงทะเบียนอุปกรณ์สำเร็จ และตั้งเป็นค่าเริ่มต้นของบัญชีนี้')
   }
 
@@ -156,6 +168,14 @@ function App() {
     if (!input) {
       setDeviceVerified(false)
       setCameraMessage('กรุณากรอกรหัสโทรศัพท์/รหัสเครื่อง')
+      return
+    }
+
+    if (!registeredDevice) {
+      setDeviceVerified(false)
+      setDeviceStatus('unregistered')
+      setDeviceApprovalMessage('ยังไม่ลงทะเบียนอุปกรณ์ กรุณาลงทะเบียนอุปกรณ์ก่อน')
+      setCameraMessage('ต้องลงทะเบียนอุปกรณ์ก่อนจึงจะลงชื่อทำงานได้')
       return
     }
 
@@ -187,7 +207,9 @@ function App() {
     setDeviceVerified(false)
     setDeviceStatus('pending')
     setDeviceChangePending(true)
-    setDeviceApprovalMessage('ตรวจพบการเปลี่ยนแปลงอุปกรณ์ ต้องให้แอดมินยืนยันก่อน')
+    setDeviceApprovalMessage(
+      `อุปกรณ์ไม่ตรงกับที่ลงทะเบียนไว้ | หน่วยบริการเดิม: ${registeredDevice.serviceUnit} | รอแอดมินยืนยัน`,
+    )
     setSignInStep('error')
     setCameraMessage('อุปกรณ์ไม่ตรงกับที่ลงทะเบียนไว้ รอแอดมินยืนยัน')
   }
@@ -458,26 +480,27 @@ function App() {
             <div className="panel-actions">
               <button
                 type="button"
+                className="secondary-button"
+                onClick={registerDevice}
+                disabled={!!registeredDevice}
+              >
+                {registeredDevice ? 'ลงทะเบียนอุปกรณ์แล้ว' : 'ลงทะเบียนอุปกรณ์'}
+              </button>
+              <button
+                type="button"
                 className="primary-button"
                 onClick={startCamera}
-                disabled={cameraStatus === 'starting' || signInStep === 'submitting'}
+                disabled={!registeredDevice || cameraStatus === 'starting' || signInStep === 'submitting'}
               >
-                {cameraStatus === 'starting' ? 'กำลังเปิดกล้อง...' : 'เปิดกล้องสำหรับลงชื่อเข้าใช้'}
+                เปิดกล้องสำหรับลงชื่อเข้าใช้
               </button>
               <button
                 type="button"
                 className="primary-button"
                 onClick={captureFace}
-                disabled={signInStep !== 'face' || cameraStatus !== 'active'}
+                disabled={!registeredDevice || signInStep !== 'face' || cameraStatus !== 'active'}
               >
                 ลงชื่อเข้าทำงาน
-              </button>
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={registerDevice}
-              >
-                ลงทะเบียนอุปกรณ์
               </button>
               <button
                 type="button"
@@ -506,6 +529,18 @@ function App() {
             </div>
 
             <div className="device-code-box">
+              <label htmlFor="service-unit">ระบุหน่วยบริการ</label>
+              <input
+                id="service-unit"
+                type="text"
+                value={serviceUnit}
+                onChange={(event) => setServiceUnit(event.target.value)}
+                placeholder="เช่น หน่วยบริการ A"
+                disabled={!!registeredDevice}
+              />
+            </div>
+
+            <div className="device-code-box">
               <label htmlFor="device-code">IMEI / รหัสอุปกรณ์ที่ลงทะเบียน</label>
               <input
                 id="device-code"
@@ -513,25 +548,28 @@ function App() {
                 value={deviceInput}
                 onChange={(event) => setDeviceInput(event.target.value)}
                 placeholder="กรอก IMEI หรือรหัสอุปกรณ์"
-                disabled={signInStep !== 'deviceCode'}
+                disabled={!registeredDevice || signInStep !== 'deviceCode'}
               />
               <button
                 type="button"
                 className="primary-button"
                 onClick={verifyDeviceCode}
-                disabled={signInStep !== 'deviceCode' || !deviceInput.trim()}
+                disabled={!registeredDevice || signInStep !== 'deviceCode' || !deviceInput.trim()}
               >
                 ยืนยันอุปกรณ์
               </button>
               <p className="helper-text">
-                {signInStep === 'deviceCode'
-                  ? 'กรอกรหัสอุปกรณ์/IMEI ที่ลงทะเบียนไว้ หากไม่ตรงกับอุปกรณ์เดิม ระบบจะขึ้นสถานะรอแอดมินยืนยัน'
-                  : 'ต้องผ่านใบหน้าและ GPS ก่อนจึงจะกรอกรหัสอุปกรณ์ได้'}
+                {registeredDevice
+                  ? signInStep === 'deviceCode'
+                    ? 'กรอกรหัสอุปกรณ์/IMEI ที่ลงทะเบียนไว้ หากไม่ตรงกับอุปกรณ์เดิม ระบบจะขึ้นสถานะรอแอดมินยืนยัน'
+                    : 'ต้องผ่านใบหน้าและ GPS ก่อนจึงจะกรอกรหัสอุปกรณ์ได้'
+                  : 'ต้องลงทะเบียนอุปกรณ์และระบุหน่วยบริการก่อน จึงจะเริ่มลงชื่อทำงานได้'}
               </p>
             </div>
 
             <div className="info-card">
               <p><strong>สถานะอุปกรณ์:</strong> {deviceApprovalMessage}</p>
+              <p><strong>หน่วยบริการ:</strong> {registeredDevice?.serviceUnit || serviceUnit || '-'}</p>
               <p><strong>สถานะอนุมัติ:</strong> {adminApprovalGranted ? 'แอดมินยืนยันแล้ว' : deviceChangePending ? 'รอยืนยันจากแอดมิน' : 'พร้อมใช้งาน'}</p>
             </div>
 
