@@ -14,6 +14,8 @@ type AttendanceRow = {
   department: string
 }
 
+type SignInStep = 'idle' | 'face' | 'location' | 'deviceCode' | 'submitting' | 'success' | 'error'
+
 const stats: StatCard[] = [
   { label: 'ผู้ลงทะเบียนวันนี้', value: '128', delta: '+12 จากเมื่อวาน' },
   { label: 'ลงเวลาสำเร็จ', value: '114', delta: 'อัปเดตล่าสุด 2 นาทีที่แล้ว' },
@@ -28,13 +30,38 @@ const attendanceRows: AttendanceRow[] = [
   { name: 'อาทิตย์ มั่นคง', status: 'กลับก่อนเวลา', time: '15:10', department: 'งานบุคคล' },
 ]
 
+const SCHOOL_LAT = 7.014937359829957
+const SCHOOL_LNG = 100.49575017521452
+const MAX_DISTANCE_METERS = 20
+
+function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const toRad = (value: number) => (value * Math.PI) / 180
+  const R = 6371000
+  const dLat = toRad(lat2 - lat1)
+  const dLng = toRad(lng2 - lng1)
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 function App() {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const locationWatchRef = useRef<number | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [cameraStatus, setCameraStatus] = useState<'idle' | 'starting' | 'active' | 'error'>('idle')
-  const [cameraMessage, setCameraMessage] = useState('กดปุ่มเพื่อเริ่มใช้งานกล้องสำหรับลงชื่อเข้าใช้')
+  const [cameraMessage, setCameraMessage] = useState('กดปุ่มเพื่อเริ่มสแกนใบหน้า')
   const [checkedIn, setCheckedIn] = useState(32)
+  const [signInStep, setSignInStep] = useState<SignInStep>('idle')
+  const [faceVerified, setFaceVerified] = useState(false)
+  const [locationVerified, setLocationVerified] = useState(false)
+  const [deviceVerified, setDeviceVerified] = useState(false)
+  const [deviceCode] = useState('123456')
+  const [deviceInput, setDeviceInput] = useState('')
+  const [gpsMessage, setGpsMessage] = useState('ยังไม่ได้ตรวจจับตำแหน่ง')
+  const [distanceMeters, setDistanceMeters] = useState<number | null>(null)
+  const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number } | null>(null)
 
   const today = useMemo(() => {
     return new Date().toLocaleDateString('th-TH', {
@@ -55,8 +82,24 @@ function App() {
     setCameraMessage('หยุดการใช้งานกล้องแล้ว')
   }
 
+  const resetFlow = () => {
+    setSignInStep('idle')
+    setFaceVerified(false)
+    setLocationVerified(false)
+    setDeviceVerified(false)
+    setDeviceInput('')
+    setGpsMessage('ยังไม่ได้ตรวจจับตำแหน่ง')
+    setDistanceMeters(null)
+    setCurrentCoords(null)
+    setCameraMessage('กดปุ่มเพื่อเริ่มสแกนใบหน้า')
+    stopCamera()
+  }
+
   useEffect(() => {
     return () => {
+      if (locationWatchRef.current !== null && navigator.geolocation?.clearWatch) {
+        navigator.geolocation.clearWatch(locationWatchRef.current)
+      }
       stopCamera()
     }
   }, [])
@@ -65,12 +108,14 @@ function App() {
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraStatus('error')
       setCameraMessage('เบราว์เซอร์นี้ไม่รองรับการเข้าถึงกล้อง')
+      setSignInStep('error')
       return
     }
 
     try {
       setCameraStatus('starting')
-      setCameraMessage('กำลังเปิดกล้อง...')
+      setCameraMessage('กำลังเปิดกล้องเพื่อสแกนใบหน้า...')
+      setSignInStep('face')
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user' },
         audio: false,
@@ -83,11 +128,82 @@ function App() {
       }
 
       setCameraStatus('active')
-      setCameraMessage('กล้องพร้อมใช้งานสำหรับลงชื่อเข้าใช้')
-      setCheckedIn((current) => current + 1)
+      setCameraMessage('กล้องพร้อมใช้งาน: จัดหน้าให้อยู่ในกรอบเพื่อสแกนใบหน้า')
     } catch {
       setCameraStatus('error')
       setCameraMessage('ไม่สามารถเปิดกล้องได้ โปรดตรวจสอบสิทธิ์การใช้งาน')
+      setSignInStep('error')
+    }
+  }
+
+  const captureFace = () => {
+    setFaceVerified(true)
+    setSignInStep('location')
+    setCameraMessage('สแกนใบหน้าผ่านแล้ว กำลังตรวจ GPS...')
+    requestLocation()
+  }
+
+  const requestLocation = () => {
+    if (!navigator.geolocation) {
+      setGpsMessage('อุปกรณ์นี้ไม่รองรับ GPS')
+      setSignInStep('error')
+      return
+    }
+
+    setGpsMessage('กำลังตรวจตำแหน่ง...')
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude
+        const lng = position.coords.longitude
+        const meters = haversineMeters(lat, lng, SCHOOL_LAT, SCHOOL_LNG)
+
+        setCurrentCoords({ lat, lng })
+        setDistanceMeters(meters)
+
+        if (meters <= MAX_DISTANCE_METERS) {
+          setLocationVerified(true)
+          setGpsMessage(`ผ่าน GPS: อยู่ห่าง ${meters.toFixed(1)} เมตร`)
+          setSignInStep('deviceCode')
+          setCameraMessage('ผ่าน GPS แล้ว กรุณากรอกรหัสโทรศัพท์/รหัสเครื่องที่ลงทะเบียน')
+        } else {
+          setLocationVerified(false)
+          setGpsMessage(`ไม่ผ่าน GPS: อยู่ห่าง ${meters.toFixed(1)} เมตร เกิน ${MAX_DISTANCE_METERS} เมตร`)
+          setSignInStep('error')
+          setCameraMessage('ตรวจ GPS ไม่ผ่าน')
+        }
+      },
+      (error) => {
+        setGpsMessage(error.message || 'ไม่สามารถดึงตำแหน่งได้')
+        setLocationVerified(false)
+        setSignInStep('error')
+        setCameraMessage('ตรวจ GPS ไม่ผ่าน')
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+    )
+  }
+
+  const verifyDeviceCode = () => {
+    const input = deviceInput.trim()
+    if (!input) {
+      setDeviceVerified(false)
+      setCameraMessage('กรุณากรอกรหัสโทรศัพท์/รหัสเครื่อง')
+      return
+    }
+
+    if (input === deviceCode) {
+      setDeviceVerified(true)
+      setSignInStep('submitting')
+      setCameraMessage('ตรวจสอบรหัสผ่านแล้ว กำลังส่งลงชื่อเข้าใช้งาน...')
+      setTimeout(() => {
+        setCameraStatus('active')
+        setCheckedIn((current) => current + 1)
+        setSignInStep('success')
+        setCameraMessage('ลงชื่อสำเร็จ')
+      }, 800)
+    } else {
+      setDeviceVerified(false)
+      setSignInStep('error')
+      setCameraMessage('รหัสโทรศัพท์/รหัสเครื่องไม่ถูกต้อง')
     }
   }
 
@@ -113,7 +229,7 @@ function App() {
         <div className="sidebar-card">
           <p className="sidebar-card-label">สถานะระบบ</p>
           <strong>พร้อมใช้งาน</strong>
-          <span>Local demo mode</span>
+          <span>Location + Face + Device flow</span>
         </div>
       </aside>
 
@@ -151,9 +267,32 @@ function App() {
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Mobile Sign-in</p>
-                <h3>ลงชื่อเข้าใช้งานด้วยกล้อง</h3>
+                <h3>ลงชื่อเข้าใช้งานด้วย Face + GPS + Device Code</h3>
               </div>
-              <span className={`status-pill status-${cameraStatus}`}>{cameraStatus === 'active' ? 'ใช้งานอยู่' : cameraStatus === 'starting' ? 'กำลังเปิด' : cameraStatus === 'error' ? 'ผิดพลาด' : 'พร้อม'}</span>
+              <span className={`status-pill status-${signInStep === 'success' ? 'active' : signInStep === 'error' ? 'error' : signInStep === 'submitting' ? 'starting' : 'idle'}`}>
+                {signInStep === 'success'
+                  ? 'สำเร็จ'
+                  : signInStep === 'submitting'
+                    ? 'กำลังบันทึก'
+                    : signInStep === 'error'
+                      ? 'ผิดพลาด'
+                      : 'พร้อม'}
+              </span>
+            </div>
+
+            <div className="stepper">
+              <div className={`step ${signInStep === 'face' || faceVerified ? 'done' : ''}`}>
+                <strong>1</strong>
+                <span>สแกนใบหน้า</span>
+              </div>
+              <div className={`step ${(signInStep === 'location' || locationVerified || deviceVerified) ? 'done' : ''}`}>
+                <strong>2</strong>
+                <span>ตรวจ GPS ≤ 20 ม.</span>
+              </div>
+              <div className={`step ${deviceVerified ? 'done' : ''}`}>
+                <strong>3</strong>
+                <span>รหัสโทรศัพท์/เครื่อง</span>
+              </div>
             </div>
 
             <div className="camera-box">
@@ -165,12 +304,52 @@ function App() {
             </div>
 
             <div className="panel-actions">
-              <button type="button" className="primary-button" onClick={startCamera} disabled={cameraStatus === 'starting'}>
-                {cameraStatus === 'starting' ? 'กำลังเปิดกล้อง...' : 'Start Camera'}
+              <button type="button" className="primary-button" onClick={startCamera} disabled={cameraStatus === 'starting' || signInStep === 'submitting'}>
+                {cameraStatus === 'starting' ? 'กำลังเปิดกล้อง...' : faceVerified ? 'สแกนใบหน้าผ่านแล้ว' : 'Start Face Scan'}
               </button>
-              <button type="button" className="secondary-button" onClick={stopCamera}>
-                Stop Camera
+              <button type="button" className="secondary-button" onClick={captureFace} disabled={signInStep !== 'face' || cameraStatus !== 'active'}>
+                ผ่านใบหน้า
               </button>
+              <button type="button" className="secondary-button" onClick={resetFlow}>
+                รีเซ็ตฟลูว์
+              </button>
+            </div>
+
+            <div className="checklist">
+              <div className={faceVerified ? 'check done' : 'check'}>✓ ใบหน้า</div>
+              <div className={locationVerified ? 'check done' : 'check'}>✓ GPS</div>
+              <div className={deviceVerified ? 'check done' : 'check'}>✓ รหัสโทรศัพท์/เครื่อง</div>
+            </div>
+
+            <div className="info-card">
+              <p><strong>สถานะ GPS:</strong> {gpsMessage}</p>
+              <p><strong>ระยะ:</strong> {distanceMeters !== null ? `${distanceMeters.toFixed(1)} เมตร` : '-'}</p>
+              <p><strong>พิกัด:</strong> {currentCoords ? `${currentCoords.lat.toFixed(6)}, ${currentCoords.lng.toFixed(6)}` : '-'}</p>
+            </div>
+
+            <div className="device-code-box">
+              <label htmlFor="device-code">รหัสโทรศัพท์ / รหัสเครื่องที่ลงทะเบียน</label>
+              <input
+                id="device-code"
+                type="text"
+                value={deviceInput}
+                onChange={(event) => setDeviceInput(event.target.value)}
+                placeholder="กรอกรหัสโทรศัพท์หรือรหัสเครื่อง"
+                disabled={signInStep !== 'deviceCode'}
+              />
+              <button
+                type="button"
+                className="primary-button"
+                onClick={verifyDeviceCode}
+                disabled={signInStep !== 'deviceCode' || !deviceInput.trim()}
+              >
+                ยืนยันรหัส
+              </button>
+              <p className="helper-text">
+                {signInStep === 'deviceCode'
+                  ? 'กรอกรหัสโทรศัพท์/เครื่องที่ลงทะเบียนไว้เพื่อยืนยันตัวตน'
+                  : 'ต้องผ่านใบหน้าและ GPS ก่อนจึงจะกรอกรหัสได้'}
+              </p>
             </div>
 
             <p className="helper-text">{cameraMessage}</p>
