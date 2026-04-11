@@ -1,73 +1,55 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sarabun:wght@400;500;600;700&display=swap');
 
-@layer base {
-  :root {
-    --background: 222 47% 11%;
-    --foreground: 213 31% 91%;
-    --card: 222 47% 14%;
-    --card-foreground: 213 31% 91%;
-    --popover: 222 47% 11%;
-    --popover-foreground: 213 31% 91%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 222 47% 20%;
-    --secondary-foreground: 213 31% 91%;
-    --muted: 222 47% 18%;
-    --muted-foreground: 215 16% 57%;
-    --accent: 217 91% 60%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 213 31% 91%;
-    --border: 217 32% 20%;
-    --input: 217 32% 20%;
-    --ring: 217 91% 60%;
-    --radius: 0.75rem;
-    --sidebar-width: 260px;
-  }
+:root {
+  font-family: 'Sarabun', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #e5eefb;
+  background: #0f172a;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --background: #0f172a;
+  --foreground: #e5eefb;
+  --border: rgba(148, 163, 184, 0.18);
 }
 
-@layer base {
-  * {
-    border-color: hsl(var(--border));
-  }
-  body {
-    @apply bg-[hsl(var(--background))] text-[hsl(var(--foreground))];
-    font-family: 'Sarabun', 'Inter', sans-serif;
-    min-height: 100vh;
-  }
+* {
+  box-sizing: border-box;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: hsl(var(--background)); }
-::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
-
-/* Animations */
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 8px rgba(59,130,246,0.5); }
-  50% { box-shadow: 0 0 20px rgba(59,130,246,0.8); }
-}
-@keyframes slide-in-left {
-  from { transform: translateX(-100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes spin {
-  to { transform: rotate(360deg); }
+html {
+  min-height: 100%;
+  scroll-behavior: smooth;
 }
 
-.animate-fade-in { animation: fade-in 0.4s ease forwards; }
-.animate-slide-in { animation: slide-in-left 0.3s ease forwards; }
-.animate-pulse-glow { animation: pulse-glow 2s infinite; }
-.animate-spin { animation: spin 1s linear infinite; }
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(37, 99, 235, 0.16), transparent 30%),
+    linear-gradient(180deg, #0f172a 0%, #111827 100%);
+  color: var(--foreground);
+}
 
-/* Status badges */
-.status-ปกติ { @apply bg-emerald-500/20 text-emerald-400 border border-emerald-500/30; }
-.status-สาย { @apply bg-red-500/20 text-red-400 border border-red-500/30; }
-.status-กลับก่อนเวลา { @apply bg-amber-500/20 text-amber-400 border border-amber-500/30; }
-.status-ปฏิบัติหน้าที่เวร { @apply bg-blue-500/20 text-blue-400 border border-blue-500/30; }
-.status-ขาด { @apply bg-zinc-500/20 text-zinc-400 border border-zinc-500/30; }
+a {
+  color: inherit;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+img,
+video {
+  max-width: 100%;
+}
+
+#root {
+  min-height: 100vh;
+}
