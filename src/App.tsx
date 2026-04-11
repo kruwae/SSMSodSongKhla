@@ -45,12 +45,6 @@ function App() {
     })
   }, [])
 
-  useEffect(() => {
-    return () => {
-      stopCamera()
-    }
-  }, [])
-
   const stopCamera = () => {
     streamRef.current?.getTracks().forEach((track) => track.stop())
     streamRef.current = null
@@ -60,6 +54,12 @@ function App() {
     setCameraStatus('idle')
     setCameraMessage('หยุดการใช้งานกล้องแล้ว')
   }
+
+  useEffect(() => {
+    return () => {
+      stopCamera()
+    }
+  }, [])
 
   const startCamera = async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -92,9 +92,9 @@ function App() {
   }
 
   return (
-    <div className={`dashboard-page ${sidebarOpen ? 'sidebar-open' : ''}`}>
+    <div className="index-page">
       <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
-      <aside className="sidebar">
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
           <div className="brand-mark">SSM</div>
           <div>
