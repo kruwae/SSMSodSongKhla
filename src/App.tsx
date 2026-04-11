@@ -89,6 +89,8 @@ function App() {
   const [deviceApprovalMessage, setDeviceApprovalMessage] = useState('ยังไม่ได้ลงทะเบียนอุปกรณ์')
   const [deviceChangePending, setDeviceChangePending] = useState(false)
   const [adminApprovalGranted, setAdminApprovalGranted] = useState(false)
+  const [imeiChecked, setImeiChecked] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
   const today = useMemo(() => {
     return new Date().toLocaleDateString('th-TH', {
@@ -337,6 +339,45 @@ function App() {
     requestDeviceVerification()
   }
 
+  const autoCheckImei = () => {
+    const input = deviceInput.trim()
+    if (!registeredDevice || !input) return
+    const passed = input === registeredDevice.imei
+    setImeiChecked(passed)
+    setCameraMessage(passed ? 'ตรวจ IMEI อัตโนมัติผ่านแล้ว' : 'ตรวจ IMEI อัตโนมัติไม่ผ่าน')
+  }
+
+  const saveToGoogleSheet = async () => {
+    setSaveStatus('saving')
+    try {
+      const response = await fetch('https://script.google.com/macros/s/REPLACE_WITH_YOUR_WEB_APP_URL/exec', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          timestamp: new Date().toISOString(),
+          deviceId: registeredDevice?.id ?? '',
+          imei: deviceInput.trim(),
+          imeiChecked,
+          faceVerified,
+          locationVerified,
+          adminApprovalGranted,
+          gpsMessage,
+          distanceMeters,
+          serviceUnit: registeredDevice?.serviceUnit || serviceUnit,
+        }),
+      })
+
+      if (!response.ok) throw new Error('save failed')
+      setSaveStatus('saved')
+      setCameraMessage('บันทึกข้อมูลลง Google Sheet สำเร็จ')
+    } catch {
+      setSaveStatus('error')
+      setCameraMessage('บันทึกลง Google Sheet ไม่สำเร็จ')
+    }
+  }
+
   return (
     <div className="index-page">
       <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
@@ -491,6 +532,14 @@ function App() {
               <button
                 type="button"
                 className="secondary-button"
+                onClick={autoCheckImei}
+                disabled={!registeredDevice || !deviceInput.trim() || signInStep !== 'deviceCode'}
+              >
+                ตรวจรหัสเครื่องอัตโนมัติ
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
                 onClick={approveDeviceChange}
                 disabled={!deviceChangePending || !deviceInput.trim() || !deviceInput.trim().length}
               >
@@ -557,7 +606,16 @@ function App() {
               <p><strong>สถานะอุปกรณ์:</strong> {deviceApprovalMessage}</p>
               <p><strong>หน่วยบริการ:</strong> {registeredDevice?.serviceUnit || serviceUnit || '-'}</p>
               <p><strong>สถานะอนุมัติ:</strong> {adminApprovalGranted ? 'แอดมินยืนยันแล้ว' : deviceChangePending ? 'รอยืนยันจากแอดมิน' : 'พร้อมใช้งาน'}</p>
+              <p><strong>IMEI ตรวจแล้ว:</strong> {imeiChecked ? 'ผ่าน' : 'ยังไม่ตรวจ'}</p>
+              <p><strong>สถานะบันทึก:</strong> {saveStatus === 'idle' ? 'รอบันทึก' : saveStatus === 'saving' ? 'กำลังบันทึก' : saveStatus === 'saved' ? 'บันทึกแล้ว' : 'บันทึกไม่สำเร็จ'}</p>
             </div>
+            {faceVerified && locationVerified && imeiChecked && adminApprovalGranted && (
+              <div className="panel-actions">
+                <button type="button" className="primary-button" onClick={saveToGoogleSheet} disabled={saveStatus === 'saving'}>
+                  บันทึกลง Google Sheet
+                </button>
+              </div>
+            )}
 
             <p className="helper-text">{cameraMessage}</p>
           </article>
