@@ -90,17 +90,29 @@ function AdminDashboardPage({ today }: AdminDashboardPageProps) {
         },
       })
 
-      const data = (await response.json()) as GoogleSheetTestResponse
+      const rawText = await response.text()
+      const data = rawText ? (JSON.parse(rawText) as GoogleSheetTestResponse) : null
 
-      if (data.steps?.length) {
+      if (data?.steps?.length) {
         setTestSteps(data.steps)
       }
 
-      if (!response.ok || !data.ok) {
-        const errorMessage = data.error || data.message || `HTTP ${response.status}`
+      if (!response.ok || !data?.ok) {
+        const errorMessage = data?.error || data?.message || rawText || `HTTP ${response.status}`
         const classifiedError = classifyGoogleSheetError(errorMessage)
         setTestOk(false)
         setTestResult(`ไม่สามารถเชื่อมต่อ Google Sheets ได้: ${classifiedError}`)
+
+        if (!data?.steps?.length) {
+          setTestSteps((current) =>
+            current.map((step, index) => ({
+              ...step,
+              ok: false,
+              status: index === 0 ? 'error' : 'pending',
+              message: index === 0 ? errorMessage : 'รอการทดสอบ',
+            })),
+          )
+        }
         return
       }
 
@@ -108,15 +120,16 @@ function AdminDashboardPage({ today }: AdminDashboardPageProps) {
       setTestResult(
         `เชื่อมต่อสำเร็จ: ${data.spreadsheetTitle || '-'} | tab: ${data.sheetName || '-'} | พบแท็บ: ${data.sheetExists ? 'ใช่' : 'ไม่พบ'} | จำนวนแท็บ: ${data.sheetCount ?? 0}`,
       )
-    } catch {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'ไม่สามารถทดสอบการเชื่อมต่อได้'
       setTestOk(false)
-      setTestResult('ไม่สามารถทดสอบการเชื่อมต่อได้')
+      setTestResult(`ไม่สามารถทดสอบการเชื่อมต่อได้: ${errorMessage}`)
       setTestSteps((current) =>
         current.map((step, index) => ({
           ...step,
           ok: false,
           status: index === 0 ? 'error' : 'pending',
-          message: index === 0 ? 'ไม่สามารถเรียก API ทดสอบได้' : 'รอการทดสอบ',
+          message: index === 0 ? errorMessage : 'รอการทดสอบ',
         })),
       )
     } finally {
