@@ -1,38 +1,23 @@
-import { type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 
-export type StatCard = {
+type StatCard = {
   label: string
   value: string
   delta: string
 }
 
-export type UserDashboardPageProps = {
-  today: string
-  stats: StatCard[]
-  checkedIn: number
-  onStartCheckIn: () => void
-  actionSlot?: ReactNode
-}
+const stats: StatCard[] = [
+  { label: 'ผู้ลงทะเบียนวันนี้', value: '128', delta: '+12 จากเมื่อวาน' },
+  { label: 'ลงเวลาสำเร็จ', value: '114', delta: 'อัปเดตล่าสุด 2 นาทีที่แล้ว' },
+  { label: 'สาย', value: '9', delta: 'ต้องติดตามผล' },
+  { label: 'ขาดงาน', value: '5', delta: 'รอการยืนยัน' },
+]
 
-function UserDashboardPage({
-  today,
-  stats,
-  checkedIn,
-  onStartCheckIn,
-  actionSlot,
-}: UserDashboardPageProps) {
+function UserDashboardPage() {
+  const navigate = useNavigate()
+
   return (
-    <div className="page-shell">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">SSM Attendance Dashboard</p>
-          <h2>แดชบอร์ดลงเวลา</h2>
-        </div>
-        <div className="topbar-meta">
-          <span>{today}</span>
-        </div>
-      </header>
-
+    <>
       <section className="stats-grid">
         {stats.map((stat) => (
           <article className="stat-card" key={stat.label}>
@@ -51,38 +36,16 @@ function UserDashboardPage({
           </div>
         </div>
         <div className="panel-actions">
-          <button type="button" className="primary-button" onClick={onStartCheckIn}>
-            เปิดกล้องสำหรับลงชื่อเข้าทำงาน
+          <button type="button" className="primary-button" onClick={() => navigate('/user/check-in')}>
+            ไปหน้าลงชื่อเข้าทำงาน
+          </button>
+          <button type="button" className="secondary-button" onClick={() => navigate('/user/history')}>
+            ดูประวัติ
           </button>
         </div>
-        <p className="helper-text">เมื่อเปิดกล้องแล้ว ระบบจะตรวจใบหน้า + GPS + IMEI ของอุปกรณ์ตามลำดับ</p>
-        {actionSlot}
+        <p className="helper-text">เส้นทางนี้ยังคงใช้ flow เดิมสำหรับ camera + GPS + device</p>
       </section>
-
-      <section className="panel summary-panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Summary</p>
-            <h3>ภาพรวมการปฏิบัติงาน</h3>
-          </div>
-        </div>
-
-        <div className="summary-grid">
-          <div>
-            <span>เช็กอินสำเร็จ</span>
-            <strong>{Math.max(checkedIn, 0)} คน</strong>
-          </div>
-          <div>
-            <span>ตรวจสอบด้วยกล้อง</span>
-            <strong>72%</strong>
-          </div>
-          <div>
-            <span>รออนุมัติ</span>
-            <strong>14 รายการ</strong>
-          </div>
-        </div>
-      </section>
-    </div>
+    </>
   )
 }
 

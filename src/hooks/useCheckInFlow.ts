@@ -2,6 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import {
   type CameraStatus,
   createCheckInService,
+  DEFAULT_MAX_DISTANCE_METERS,
+  DEFAULT_MIN_ACCURACY_METERS,
+  DEFAULT_SCHOOL_LAT,
+  DEFAULT_SCHOOL_LNG,
+  DEFAULT_STORED_DEVICE_SEED,
   type GpsPrecision,
   type RegisteredDevice,
   type SaveStatus,
@@ -9,26 +14,12 @@ import {
   type CheckInSnapshot,
 } from '../services/checkInService'
 
-const SCHOOL_LAT = 6.56405379821
-const SCHOOL_LNG = 101.38833639069
-const MAX_DISTANCE_METERS = 70
-const MIN_ACCURACY_METERS = 100
-
-const storedDeviceSeed = {
-  imei: '123456',
-  name: 'มือถือเจ้าหน้าที่เวรเช้า',
-  owner: 'สุภาวดี แสงทอง',
-  serviceUnit: 'หน่วยบริการ A',
-  gpsEnabled: true,
-  scanEnabled: true,
-}
-
 const checkInService = createCheckInService({
-  schoolLat: SCHOOL_LAT,
-  schoolLng: SCHOOL_LNG,
-  maxDistanceMeters: MAX_DISTANCE_METERS,
-  minAccuracyMeters: MIN_ACCURACY_METERS,
-  storedDeviceSeed,
+  schoolLat: DEFAULT_SCHOOL_LAT,
+  schoolLng: DEFAULT_SCHOOL_LNG,
+  maxDistanceMeters: DEFAULT_MAX_DISTANCE_METERS,
+  minAccuracyMeters: DEFAULT_MIN_ACCURACY_METERS,
+  storedDeviceSeed: DEFAULT_STORED_DEVICE_SEED,
 })
 
 export function useCheckInFlow() {
@@ -57,9 +48,11 @@ export function useCheckInFlow() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
 
   useEffect(() => {
+    const locationWatchId = locationWatchRef.current
+
     return () => {
-      if (locationWatchRef.current !== null && navigator.geolocation?.clearWatch) {
-        navigator.geolocation.clearWatch(locationWatchRef.current)
+      if (locationWatchId !== null && navigator.geolocation?.clearWatch) {
+        navigator.geolocation.clearWatch(locationWatchId)
       }
       streamRef.current?.getTracks().forEach((track) => track.stop())
     }

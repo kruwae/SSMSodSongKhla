@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { apiClient } from '../../services/api'
 
 export type CrudField = {
   name: string
@@ -17,6 +18,7 @@ export type CrudShellProps<T extends Record<string, string | number | boolean>> 
   getRowKey: (item: T) => string
   getTitle: (item: T) => string
   renderSummary: (item: T) => React.ReactNode
+  entityName?: 'users' | 'devices' | 'locations'
 }
 
 function formatValue(value: string | number | boolean) {
@@ -35,6 +37,7 @@ export default function AdminCrudShell<T extends Record<string, string | number 
   getRowKey,
   getTitle,
   renderSummary,
+  entityName,
 }: CrudShellProps<T>) {
   const [items, setItems] = useState<T[]>(initialItems)
   const [editingKey, setEditingKey] = useState<string | null>(null)
@@ -69,7 +72,15 @@ export default function AdminCrudShell<T extends Record<string, string | number 
     setMessage(`กำลังแก้ไข: ${getTitle(item)}`)
   }
 
-  const deleteItem = (key: string) => {
+  const deleteItem = async (key: string) => {
+    if (entityName) {
+      const result = await apiClient.deleteAdminEntity(entityName, key)
+      if (!result.deleted) {
+        setMessage('ลบรายการไม่สำเร็จ')
+        return
+      }
+    }
+
     setItems((current) => current.filter((item) => getRowKey(item) !== key))
     setMessage('ลบรายการเรียบร้อย')
     if (editingKey === key) {
@@ -82,7 +93,7 @@ export default function AdminCrudShell<T extends Record<string, string | number 
     setDraft((current) => ({ ...current, [name]: value }))
   }
 
-  const saveItem = () => {
+  const saveItem = async () => {
     const nextItem = fields.reduce<Record<string, string | number | boolean>>((acc, field) => {
       const value = draft[field.name]
       acc[field.name] = field.type === 'number' ? Number(value || 0) : field.type === 'checkbox' ? Boolean(value) : String(value || '')
@@ -90,10 +101,25 @@ export default function AdminCrudShell<T extends Record<string, string | number 
     }, {}) as T
 
     if (editingItem) {
+      if (entityName) {
+        const result = await apiClient.saveAdminEntity(entityName, nextItem as T & { id: string })
+        if (!result.saved) {
+          setMessage('บันทึกการแก้ไขไม่สำเร็จ')
+          return
+        }
+      }
       setItems((current) => current.map((item) => (getRowKey(item) === editingKey ? nextItem : item)))
       setMessage('บันทึกการแก้ไขเรียบร้อย')
     } else {
-      setItems((current) => [{ ...nextItem, id: `mock-${Date.now()}` } as T, ...current])
+      const createdItem = { ...nextItem, id: `mock-${Date.now()}` } as T & { id: string }
+      if (entityName) {
+        const result = await apiClient.saveAdminEntity(entityName, createdItem)
+        if (!result.saved) {
+          setMessage('เพิ่มรายการไม่สำเร็จ')
+          return
+        }
+      }
+      setItems((current) => [createdItem as T, ...current])
       setMessage('เพิ่มรายการเรียบร้อย')
     }
 

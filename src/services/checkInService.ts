@@ -45,6 +45,20 @@ export type CheckInServiceDeps = {
   }
 }
 
+export const DEFAULT_SCHOOL_LAT = 6.56405379821
+export const DEFAULT_SCHOOL_LNG = 101.38833639069
+export const DEFAULT_MAX_DISTANCE_METERS = 70
+export const DEFAULT_MIN_ACCURACY_METERS = 100
+
+export const DEFAULT_STORED_DEVICE_SEED = {
+  imei: '123456',
+  name: 'มือถือเจ้าหน้าที่เวรเช้า',
+  owner: 'สุภาวดี แสงทอง',
+  serviceUnit: 'หน่วยบริการ A',
+  gpsEnabled: true,
+  scanEnabled: true,
+}
+
 export function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number) {
   const toRad = (value: number) => (value * Math.PI) / 180
   const R = 6371000
