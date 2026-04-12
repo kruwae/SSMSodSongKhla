@@ -449,6 +449,8 @@
   .menu-button {
     display: inline-grid;
     place-items: center;
+    z-index: 30;
+    position: relative;
   }
 
   .stats-grid,
