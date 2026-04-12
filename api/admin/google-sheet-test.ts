@@ -33,6 +33,22 @@ type GoogleSheetsConfig = {
 }
 
 
+function buildEnvVarChecklist(values: {
+  spreadsheetId?: string
+  clientEmail?: string
+  privateKey?: string
+  sheetName?: string
+}) {
+  const checks = [
+    ['GOOGLE_SHEET_ID', Boolean(values.spreadsheetId)],
+    ['GOOGLE_SERVICE_ACCOUNT_EMAIL', Boolean(values.clientEmail)],
+    ['GOOGLE_PRIVATE_KEY', Boolean(values.privateKey)],
+    ['GOOGLE_SHEET_TAB', Boolean(values.sheetName)],
+  ] as const
+
+  return checks.map(([label, ok]) => `${ok ? '/' : 'X'} ${label}`).join(' | ')
+}
+
 function parseServiceAccountJson(rawValue: string) {
   try {
     const parsed = JSON.parse(rawValue) as {
@@ -60,17 +76,23 @@ function getGoogleSheetConfig(): GoogleSheetsConfig {
 
   const privateKeySource = process.env.GOOGLE_PRIVATE_KEY ?? parsedServiceAccount?.private_key
   const privateKey = privateKeySource ? normalizePrivateKey(privateKeySource) : undefined
+  const rawSheetTab = process.env.GOOGLE_SHEET_TAB
+  const sheetName = rawSheetTab || 'CheckIns'
+  const envChecklist = buildEnvVarChecklist({
+    spreadsheetId,
+    clientEmail,
+    privateKey,
+    sheetName: rawSheetTab,
+  })
 
-  const sheetName = process.env.GOOGLE_SHEET_TAB || 'CheckIns'
-
-  if (!spreadsheetId || !clientEmail || !privateKey) {
+  if (!spreadsheetId || !clientEmail || !privateKey || !rawSheetTab) {
     throw new Error(
-      'Google Sheets environment variables are not configured. Required: GOOGLE_SHEET_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_PRIVATE_KEY or GOOGLE_PRIVATE_KEY_JSON',
+      `Google Sheets environment variables are not configured. ${envChecklist}. Required: GOOGLE_SHEET_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_SHEET_TAB`,
     )
   }
 
   if (!privateKey.includes('BEGIN PRIVATE KEY') || !privateKey.includes('END PRIVATE KEY')) {
-    throw new Error('Google private key format is invalid: missing BEGIN PRIVATE KEY / END PRIVATE KEY markers')
+    throw new Error(`Google private key format is invalid: missing BEGIN PRIVATE KEY / END PRIVATE KEY markers. ${envChecklist}`)
   }
 
   return { spreadsheetId, clientEmail, privateKey, sheetName }
@@ -132,7 +154,12 @@ async function testGoogleSheetConnection() {
         'env_check',
         'ตรวจ env vars',
         true,
-        'พบค่า GOOGLE_SHEET_ID และข้อมูล service account แล้ว (รองรับทั้ง GOOGLE_PRIVATE_KEY และ GOOGLE_PRIVATE_KEY_JSON)',
+        buildEnvVarChecklist({
+          spreadsheetId: config.spreadsheetId,
+          clientEmail: config.clientEmail,
+          privateKey: config.privateKey,
+          sheetName: config.sheetName,
+        }),
       ),
     )
 
