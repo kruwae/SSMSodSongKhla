@@ -5,6 +5,8 @@ type AdminLocationItem = {
   name: string
   code: string
   address: string
+  latitude?: number
+  longitude?: number
   active: boolean
 }
 
@@ -30,6 +32,15 @@ const adminLocations: AdminLocationItem[] = [
     address: '88 หมู่ 7 ตำบลหนองบัว',
     active: false,
   },
+  {
+    id: 'LOC-004',
+    name: 'Work From Home',
+    code: 'WFH',
+    address: 'พิกัดทำงานจากที่บ้าน',
+    latitude: 6.647581014685428,
+    longitude: 101.30647939321433,
+    active: true,
+  },
 ]
 
 function AdminLocationsPage() {
@@ -45,6 +56,8 @@ function AdminLocationsPage() {
         { name: 'name', label: 'ชื่อสถานที่', placeholder: 'ชื่อสถานที่' },
         { name: 'code', label: 'รหัสสถานที่', placeholder: 'SITE-01' },
         { name: 'address', label: 'ที่อยู่', type: 'textarea', placeholder: 'รายละเอียดที่อยู่' },
+        { name: 'latitude', label: 'ละติจูด', placeholder: '6.647581014685428' },
+        { name: 'longitude', label: 'ลองจิจูด', placeholder: '101.30647939321433' },
         { name: 'active', label: 'ใช้งาน', type: 'checkbox' },
       ]}
       renderSummary={(item) => (
@@ -56,6 +69,14 @@ function AdminLocationsPage() {
           <div>
             <span>สถานะ</span>
             <strong>{item.active ? 'ใช้งาน' : 'ปิดใช้งาน'}</strong>
+          </div>
+          <div>
+            <span>พิกัด</span>
+            <strong>
+              {item.latitude !== undefined && item.longitude !== undefined
+                ? `${item.latitude}, ${item.longitude}`
+                : '-'}
+            </strong>
           </div>
           <div>
             <span>ที่อยู่</span>
