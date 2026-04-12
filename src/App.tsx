@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import RoleNav from './components/RoleNav'
+import AdminDevicesPage from './pages/admin/AdminDevicesPage'
+import AdminLocationsPage from './pages/admin/AdminLocationsPage'
+import AdminUsersPage from './pages/admin/AdminUsersPage'
+import { useCheckInFlow } from './hooks/useCheckInFlow'
 import './App.css'
 
 type StatCard = {
@@ -56,20 +60,6 @@ const storedDeviceSeed = {
 
 const SCHOOL_LAT = 6.56405379821
 const SCHOOL_LNG = 101.38833639069
-const MAX_DISTANCE_METERS = 70
-const MIN_ACCURACY_METERS = 100
-
-function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number) {
-  const toRad = (value: number) => (value * Math.PI) / 180
-  const R = 6371000
-  const dLat = toRad(lat2 - lat1)
-  const dLng = toRad(lng2 - lng1)
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
-  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
-
 export function ProtectedRoute({ role }: { role: AppRole }) {
   const location = useLocation()
   const pathname = location.pathname
@@ -207,292 +197,39 @@ function UserDashboardPage() {
 }
 
 function UserCheckInPage() {
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const locationWatchRef = useRef<number | null>(null)
+  const {
+    videoRef,
+    cameraStatus,
+    cameraMessage,
+    checkedIn,
+    signInStep,
+    faceVerified,
+    locationVerified,
+    deviceVerified,
+    deviceInput,
+    setDeviceInput,
+    serviceUnit,
+    setServiceUnit,
+    gpsMessage,
+    distanceMeters,
+    gpsPrecision,
+    currentCoords,
+    registeredDevice,
+    deviceApprovalMessage,
+    deviceChangePending,
+    adminApprovalGranted,
+    imeiChecked,
+    saveStatus,
+    startCamera,
+    captureFace,
+    registerDevice,
+    requestDeviceVerification,
+    autoCheckImei,
+    approveDeviceChange,
+    resetFlow,
+    saveToGoogleSheet,
+  } = useCheckInFlow()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [cameraStatus, setCameraStatus] = useState<'idle' | 'starting' | 'active' | 'error'>('idle')
-  const [cameraMessage, setCameraMessage] = useState('กดปุ่มเพื่อเริ่มสแกนใบหน้า')
-  const [checkedIn, setCheckedIn] = useState(32)
-  const [signInStep, setSignInStep] = useState<SignInStep>('idle')
-  const [faceVerified, setFaceVerified] = useState(false)
-  const [locationVerified, setLocationVerified] = useState(false)
-  const [deviceVerified, setDeviceVerified] = useState(false)
-  const [deviceInput, setDeviceInput] = useState('')
-  const [serviceUnit, setServiceUnit] = useState('')
-  const [gpsMessage, setGpsMessage] = useState('ยังไม่ได้ตรวจจับตำแหน่ง')
-  const [distanceMeters, setDistanceMeters] = useState<number | null>(null)
-  const [gpsPrecision, setGpsPrecision] = useState<'12-digit' | '6-digit'>('12-digit')
-  const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number } | null>(null)
-  const [registeredDevice, setRegisteredDevice] = useState<RegisteredDevice | null>(null)
-  const [deviceApprovalMessage, setDeviceApprovalMessage] = useState('ยังไม่ได้ลงทะเบียนอุปกรณ์')
-  const [deviceChangePending, setDeviceChangePending] = useState(false)
-  const [adminApprovalGranted, setAdminApprovalGranted] = useState(false)
-  const [imeiChecked, setImeiChecked] = useState(false)
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-
-  useEffect(() => {
-    return () => {
-      if (locationWatchRef.current !== null && navigator.geolocation?.clearWatch) {
-        navigator.geolocation.clearWatch(locationWatchRef.current)
-      }
-      streamRef.current?.getTracks().forEach((track) => track.stop())
-    }
-  }, [])
-
-  const stopCamera = () => {
-    streamRef.current?.getTracks().forEach((track) => track.stop())
-    streamRef.current = null
-    if (videoRef.current) {
-      videoRef.current.srcObject = null
-    }
-    setCameraStatus('idle')
-    setCameraMessage('หยุดการใช้งานกล้องแล้ว')
-  }
-
-  const resetFlow = () => {
-    setSignInStep('idle')
-    setFaceVerified(false)
-    setLocationVerified(false)
-    setDeviceVerified(false)
-    setDeviceInput('')
-    setGpsMessage('ยังไม่ได้ตรวจจับตำแหน่ง')
-    setDistanceMeters(null)
-    setCurrentCoords(null)
-    setCameraMessage('กดปุ่มเพื่อเริ่มสแกนใบหน้า')
-    stopCamera()
-  }
-
-  const captureDeviceFingerprint = () => ({
-    imei: storedDeviceSeed.imei,
-    name: storedDeviceSeed.name,
-    owner: storedDeviceSeed.owner,
-    serviceUnit: storedDeviceSeed.serviceUnit,
-    gpsEnabled: storedDeviceSeed.gpsEnabled,
-    scanEnabled: storedDeviceSeed.scanEnabled,
-  })
-
-  const registerDevice = () => {
-    const fingerprint = captureDeviceFingerprint()
-    if (!serviceUnit.trim()) {
-      setDeviceApprovalMessage('กรุณาระบุหน่วยบริการก่อนลงทะเบียนอุปกรณ์')
-      setCameraMessage('ต้องระบุหน่วยบริการก่อนจึงจะลงทะเบียนอุปกรณ์ได้')
-      return
-    }
-
-    const newDevice: RegisteredDevice = {
-      id: `DEV-${Date.now()}`,
-      ...fingerprint,
-      approved: true,
-    }
-    setRegisteredDevice(newDevice)
-    setDeviceVerified(true)
-    setDeviceChangePending(false)
-    setAdminApprovalGranted(false)
-    setDeviceApprovalMessage(`บันทึกอุปกรณ์เริ่มต้นแล้ว: ${newDevice.name} (${newDevice.imei}) | หน่วยบริการ: ${serviceUnit.trim()}`)
-    setCameraMessage('ลงทะเบียนอุปกรณ์สำเร็จ และตั้งเป็นค่าเริ่มต้นของบัญชีนี้')
-  }
-
-  const requestDeviceVerification = () => {
-    const input = deviceInput.trim()
-    if (!input) {
-      setDeviceVerified(false)
-      setCameraMessage('กรุณากรอกรหัสโทรศัพท์/รหัสเครื่อง')
-      return
-    }
-
-    if (!registeredDevice) {
-      setDeviceVerified(false)
-      setDeviceApprovalMessage('ยังไม่ลงทะเบียนอุปกรณ์ กรุณาลงทะเบียนอุปกรณ์ก่อน')
-      setCameraMessage('ต้องลงทะเบียนอุปกรณ์ก่อนจึงจะลงชื่อทำงานได้')
-      return
-    }
-
-    const currentDevice = registeredDevice ?? null
-    if (!currentDevice) {
-      setDeviceVerified(false)
-      setDeviceApprovalMessage('ยังไม่พบอุปกรณ์ที่ลงทะเบียน')
-      setCameraMessage('กรุณาลงทะเบียนอุปกรณ์ก่อน')
-      return
-    }
-
-    if (input === currentDevice.imei) {
-      setDeviceVerified(true)
-      setDeviceChangePending(false)
-      setDeviceApprovalMessage('อุปกรณ์ตรงกับที่ลงทะเบียนไว้ ใช้งานได้')
-      setSignInStep('submitting')
-      setCameraMessage('ตรวจสอบอุปกรณ์ผ่านแล้ว กำลังส่งลงชื่อเข้าใช้งาน...')
-      setTimeout(() => {
-        setCameraStatus('active')
-        setCheckedIn((current) => current + 1)
-        setSignInStep('success')
-        setCameraMessage('ลงชื่อสำเร็จ')
-      }, 800)
-      return
-    }
-
-    setDeviceVerified(false)
-    setDeviceChangePending(true)
-    setDeviceApprovalMessage(`อุปกรณ์ไม่ตรงกับที่ลงทะเบียนไว้ | หน่วยบริการเดิม: ${registeredDevice.serviceUnit} | รอแอดมินยืนยัน`)
-    setSignInStep('error')
-    setCameraMessage('อุปกรณ์ไม่ตรงกับที่ลงทะเบียนไว้ รอแอดมินยืนยัน')
-  }
-
-  const approveDeviceChange = () => {
-    const input = deviceInput.trim()
-    if (!input) return
-    setAdminApprovalGranted(true)
-    setDeviceVerified(true)
-    setDeviceChangePending(false)
-    setDeviceApprovalMessage('แอดมินยืนยันการเปลี่ยนแปลงอุปกรณ์แล้ว')
-    setCameraMessage('แอดมินอนุมัติอุปกรณ์ สามารถลงชื่อได้')
-    setRegisteredDevice((current) =>
-      current
-        ? {
-            ...current,
-            imei: input,
-            approved: true,
-          }
-        : current,
-    )
-  }
-
-  const startCamera = async () => {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setCameraStatus('error')
-      setCameraMessage('เบราว์เซอร์นี้ไม่รองรับการเข้าถึงกล้อง')
-      setSignInStep('error')
-      return
-    }
-
-    try {
-      setCameraStatus('starting')
-      setCameraMessage('กำลังเปิดกล้องเพื่อสแกนใบหน้า...')
-      setSignInStep('face')
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user' },
-        audio: false,
-      })
-
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
-
-      setCameraStatus('active')
-      setCameraMessage('กล้องพร้อมใช้งาน: จัดหน้าให้อยู่ในกรอบเพื่อสแกนใบหน้า')
-    } catch {
-      setCameraStatus('error')
-      setCameraMessage('ไม่สามารถเปิดกล้องได้ โปรดตรวจสอบสิทธิ์การใช้งาน')
-      setSignInStep('error')
-    }
-  }
-
-  const captureFace = () => {
-    setFaceVerified(true)
-    setSignInStep('location')
-    setCameraMessage('สแกนใบหน้าผ่านแล้ว กำลังตรวจ GPS...')
-    requestLocation()
-  }
-
-  const requestLocation = () => {
-    if (!navigator.geolocation) {
-      setGpsMessage('อุปกรณ์นี้ไม่รองรับ GPS')
-      setSignInStep('error')
-      setCameraMessage('ตรวจ GPS ไม่ผ่าน: อุปกรณ์ไม่รองรับตำแหน่ง')
-      return
-    }
-
-    setGpsMessage('กำลังตรวจตำแหน่ง...')
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude
-        const lng = position.coords.longitude
-        const accuracy = position.coords.accuracy
-        const meters = haversineMeters(lat, lng, SCHOOL_LAT, SCHOOL_LNG)
-
-        setCurrentCoords({ lat, lng })
-        setDistanceMeters(meters)
-        setGpsPrecision(accuracy <= 10 ? '12-digit' : '6-digit')
-
-        if (accuracy > MIN_ACCURACY_METERS) {
-          setLocationVerified(false)
-          setGpsMessage(`พิกัดยังไม่นิ่งพอ (accuracy ${accuracy.toFixed(1)}m) | พิกัด ${lat.toFixed(12)}, ${lng.toFixed(12)}`)
-          setSignInStep('error')
-          setCameraMessage('ตรวจ GPS ไม่ผ่าน: ความแม่นยำของพิกัดยังไม่พอ')
-          return
-        }
-
-        if (meters <= MAX_DISTANCE_METERS) {
-          setLocationVerified(true)
-          setGpsMessage(`ผ่าน GPS: อยู่ห่าง ${meters.toFixed(1)} เมตร | accuracy ${accuracy.toFixed(1)}m | พิกัด ${lat.toFixed(12)}, ${lng.toFixed(12)}`)
-          setSignInStep('deviceCode')
-          setCameraMessage('ผ่าน GPS แล้ว กรุณากรอกรหัสโทรศัพท์/รหัสเครื่องที่ลงทะเบียน')
-        } else {
-          setLocationVerified(false)
-          setGpsMessage(`ไม่ผ่าน GPS: อยู่ห่าง ${meters.toFixed(1)} เมตร เกิน ${MAX_DISTANCE_METERS} เมตร | accuracy ${accuracy.toFixed(1)}m | พิกัด ${lat.toFixed(12)}, ${lng.toFixed(12)}`)
-          setSignInStep('error')
-          setCameraMessage('ตรวจ GPS ไม่ผ่าน: พิกัดอยู่นอกพื้นที่กำหนด')
-        }
-      },
-      (error) => {
-        const reason =
-          error.code === error.PERMISSION_DENIED
-            ? 'ไม่ได้อนุญาตให้เข้าถึงตำแหน่ง'
-            : error.code === error.POSITION_UNAVAILABLE
-              ? 'ไม่สามารถระบุตำแหน่งได้'
-              : error.code === error.TIMEOUT
-                ? 'หมดเวลารอข้อมูลตำแหน่ง'
-                : error.message || 'ไม่สามารถดึงตำแหน่งได้'
-
-        setGpsMessage(`ตรวจ GPS ไม่ผ่าน: ${reason}`)
-        setLocationVerified(false)
-        setSignInStep('error')
-        setCameraMessage(`ตรวจ GPS ไม่ผ่าน: ${reason}`)
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-    )
-  }
-
-  const autoCheckImei = () => {
-    const input = deviceInput.trim()
-    if (!registeredDevice || !input) return
-    const passed = input === registeredDevice.imei
-    setImeiChecked(passed)
-    setCameraMessage(passed ? 'ตรวจ IMEI อัตโนมัติผ่านแล้ว' : 'ตรวจ IMEI อัตโนมัติไม่ผ่าน')
-  }
-
-  const saveToGoogleSheet = async () => {
-    setSaveStatus('saving')
-    try {
-      const response = await fetch('https://script.google.com/macros/s/REPLACE_WITH_YOUR_WEB_APP_URL/exec', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          timestamp: new Date().toISOString(),
-          deviceId: registeredDevice?.id ?? '',
-          imei: deviceInput.trim(),
-          imeiChecked,
-          faceVerified,
-          locationVerified,
-          adminApprovalGranted,
-          gpsMessage,
-          distanceMeters,
-          serviceUnit: registeredDevice?.serviceUnit || serviceUnit,
-        }),
-      })
-
-      if (!response.ok) throw new Error('save failed')
-      setSaveStatus('saved')
-      setCameraMessage('บันทึกข้อมูลลง Google Sheet สำเร็จ')
-    } catch {
-      setSaveStatus('error')
-      setCameraMessage('บันทึกลง Google Sheet ไม่สำเร็จ')
-    }
-  }
 
   return (
     <div className="index-page">
@@ -754,22 +491,9 @@ function AdminDashboardPage() {
   )
 }
 
-function AdminPlaceholderPage({ title }: { title: string }) {
-  return (
-    <section className="panel summary-panel">
-      <div className="panel-heading">
-        <div>
-          <p className="eyebrow">Admin</p>
-          <h3>{title}</h3>
-        </div>
-      </div>
-      <p className="helper-text">หน้าชั่วคราวสำหรับการต่อยอด CRUD ในรอบถัดไป</p>
-    </section>
-  )
-}
 
 function App() {
-  return null
+  return <AppRoutes />
 }
 
 export function AppRoutes() {
@@ -786,9 +510,9 @@ export function AppRoutes() {
       <Route element={<ProtectedRoute role="admin" />}>
         <Route path="/admin" element={<RouteShell role="admin" />}>
           <Route index element={<AdminDashboardPage />} />
-          <Route path="users" element={<AdminPlaceholderPage title="จัดการผู้ใช้" />} />
-          <Route path="devices" element={<AdminPlaceholderPage title="จัดการอุปกรณ์" />} />
-          <Route path="locations" element={<AdminPlaceholderPage title="จัดการสถานที่" />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="devices" element={<AdminDevicesPage />} />
+          <Route path="locations" element={<AdminLocationsPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
