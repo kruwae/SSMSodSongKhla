@@ -118,7 +118,6 @@ function RouteShell({ role }: { role: AppRole }) {
   )
 }
 
-
 function App() {
   return <AppRoutes />
 }
@@ -138,12 +137,19 @@ export function AppRoutes() {
       </Route>
       <Route element={<ProtectedRoute role="admin" />}>
         <Route path="/admin" element={<RouteShell role="admin" />}>
-          <Route index element={<AdminDashboardPage today={new Date().toLocaleDateString('th-TH', {
-            weekday: 'long',
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric',
-          })} />} />
+          <Route
+            index
+            element={
+              <AdminDashboardPage
+                today={new Date().toLocaleDateString('th-TH', {
+                  weekday: 'long',
+                  day: '2-digit',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              />
+            }
+          />
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="devices" element={<AdminDevicesPage />} />
           <Route path="locations" element={<AdminLocationsPage />} />

@@ -1,7 +1,12 @@
+import { google } from 'googleapis'
+
+type DiagnosticStepStatus = 'pending' | 'running' | 'success' | 'error'
+
 type DiagnosticStep = {
   name: string
   label: string
   ok: boolean
+  status: DiagnosticStepStatus
   message: string
 }
 
@@ -12,39 +17,41 @@ type GoogleSheetsConfig = {
   sheetName: string
 }
 
-type GoogleSheetsClient = {
-  auth: {
-    JWT: new (options: { email: string; key: string; scopes: string[] }) => unknown
-  }
-  sheets: (options: { version: 'v4'; auth: unknown }) => {
-    spreadsheets: {
-      get: (params: { spreadsheetId: string; includeGridData: boolean }) => Promise<unknown>
-      values: {
-        append: (params: {
-          spreadsheetId: string
-          range: string
-          valueInputOption: string
-          insertDataOption: string
-          requestBody: { values: unknown[][] }
-        }) => Promise<unknown>
-      }
-    }
-  }
-}
 
-declare const google: GoogleSheetsClient
-declare const process: {
-  env: Record<string, string | undefined>
+function parseServiceAccountJson(rawValue: string) {
+  try {
+    const parsed = JSON.parse(rawValue) as {
+      client_email?: string
+      private_key?: string
+    }
+    if (parsed.client_email && parsed.private_key) {
+      return parsed
+    }
+  } catch {
+    return null
+  }
+  return null
 }
 
 function getGoogleSheetConfig(): GoogleSheetsConfig {
   const spreadsheetId = process.env.GOOGLE_SHEET_ID ?? process.env.SHEET_ID
-  const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? process.env.GOOGLE_SERVICE_ACCOUNT
-  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n')
+  const serviceAccountJson = process.env.GOOGLE_PRIVATE_KEY_JSON ?? process.env.GOOGLE_SERVICE_ACCOUNT_JSON
+  const parsedServiceAccount = serviceAccountJson ? parseServiceAccountJson(serviceAccountJson) : null
+
+  const clientEmail =
+    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ??
+    process.env.GOOGLE_SERVICE_ACCOUNT ??
+    parsedServiceAccount?.client_email
+
+  const privateKey =
+    (process.env.GOOGLE_PRIVATE_KEY ?? parsedServiceAccount?.private_key)?.replace(/\\n/g, '\n')
+
   const sheetName = process.env.GOOGLE_SHEET_TAB || 'CheckIns'
 
   if (!spreadsheetId || !clientEmail || !privateKey) {
-    throw new Error('Google Sheets environment variables are not configured')
+    throw new Error(
+      'Google Sheets environment variables are not configured. Required: GOOGLE_SHEET_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_PRIVATE_KEY or GOOGLE_PRIVATE_KEY_JSON',
+    )
   }
 
   return { spreadsheetId, clientEmail, privateKey, sheetName }
@@ -70,8 +77,30 @@ function json(status: number, body: unknown) {
   })
 }
 
-function createStep(name: string, label: string, ok: boolean, message: string): DiagnosticStep {
-  return { name, label, ok, message }
+const diagnosticStepDefinitions = [
+  { name: 'env_check', label: 'ตรวจ env vars' },
+  { name: 'credentials_check', label: 'ตรวจ service account credentials' },
+  { name: 'auth_check', label: 'ตรวจ auth' },
+  { name: 'spreadsheet_access_check', label: 'ตรวจเข้าถึง spreadsheet' },
+  { name: 'sheet_tab_check', label: 'ตรวจ tab ที่ต้องใช้' },
+] as const
+
+function createStep(
+  name: string,
+  label: string,
+  ok: boolean,
+  message: string,
+  status: DiagnosticStepStatus = ok ? 'success' : 'error',
+): DiagnosticStep {
+  return { name, label, ok, status, message }
+}
+
+function createPendingSteps(completedSteps: DiagnosticStep[]) {
+  return diagnosticStepDefinitions.map(({ name, label }) => {
+    const completed = completedSteps.find((step) => step.name === name)
+    if (completed) return completed
+    return createStep(name, label, false, 'รอการทดสอบ', 'pending')
+  })
 }
 
 async function testGoogleSheetConnection() {
@@ -79,7 +108,14 @@ async function testGoogleSheetConnection() {
 
   try {
     const config = getGoogleSheetConfig()
-    steps.push(createStep('env_check', 'ตรวจ env vars', true, 'พบค่า SHEET_ID / GOOGLE_SERVICE_ACCOUNT / GOOGLE_PRIVATE_KEY / GOOGLE_SHEET_TAB แล้ว'))
+    steps.push(
+      createStep(
+        'env_check',
+        'ตรวจ env vars',
+        true,
+        'พบค่า GOOGLE_SHEET_ID และข้อมูล service account แล้ว (รองรับทั้ง GOOGLE_PRIVATE_KEY และ GOOGLE_PRIVATE_KEY_JSON)',
+      ),
+    )
 
     steps.push(
       createStep(
@@ -133,7 +169,12 @@ async function testGoogleSheetConnection() {
       sheetName: config.sheetName,
       sheetExists,
       sheetCount: response.data.sheets?.length ?? 0,
-      steps,
+      summary: {
+        totalSteps: diagnosticStepDefinitions.length,
+        completedSteps: steps.filter((step) => step.ok).length,
+        failedStepName: sheetExists ? undefined : 'sheet_tab_check',
+      },
+      steps: createPendingSteps(steps),
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
@@ -163,13 +204,18 @@ async function testGoogleSheetConnection() {
       steps.push(createStep('credentials_check', 'ตรวจ service account credentials', true, 'credentials ดูเหมือนถูกต้อง'))
       steps.push(createStep('auth_check', 'ตรวจ auth', false, message))
     } else {
-      steps.push(createStep('unknown_error', 'ตรวจสอบไม่ผ่าน', false, message))
+      steps.push(createStep('auth_check', 'ตรวจ auth', false, message))
     }
 
     return {
       ok: false,
       error: friendly,
-      steps,
+      summary: {
+        totalSteps: diagnosticStepDefinitions.length,
+        completedSteps: steps.filter((step) => step.ok).length,
+        failedStepName: steps.find((step) => !step.ok)?.name,
+      },
+      steps: createPendingSteps(steps),
       rawError: message,
     }
   }
@@ -182,15 +228,7 @@ export default async function handler(request: Request) {
 
   try {
     const result = await testGoogleSheetConnection()
-    return json(200, {
-      ok: true,
-      message: 'Google Sheets connection is working',
-      spreadsheetTitle: result.spreadsheetTitle,
-      sheetName: result.sheetName,
-      sheetExists: result.sheetExists,
-      sheetCount: result.sheetCount,
-      steps: result.steps,
-    })
+    return json(200, result)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     return json(500, { ok: false, error: message })

@@ -280,6 +280,88 @@
   line-height: 1.6;
 }
 
+.success-text {
+  color: #6ee7b7;
+}
+
+.error-text {
+  color: #fca5a5;
+}
+
+.diagnostic-progress {
+  margin-top: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.diagnostic-progress__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #cbd5e1;
+}
+
+.diagnostic-steps {
+  display: grid;
+  gap: 12px;
+}
+
+.diagnostic-step {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(2, 6, 23, 0.34);
+}
+
+.diagnostic-step--success {
+  border-color: rgba(16, 185, 129, 0.28);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.diagnostic-step--error {
+  border-color: rgba(239, 68, 68, 0.28);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.diagnostic-step--running {
+  border-color: rgba(59, 130, 246, 0.28);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.diagnostic-step__index {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: #eff6ff;
+  background: rgba(30, 41, 59, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.diagnostic-step__content {
+  display: grid;
+  gap: 8px;
+}
+
+.diagnostic-step__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.diagnostic-step__content p {
+  margin: 0;
+  color: #cbd5e1;
+  line-height: 1.6;
+}
+
 .table-wrap {
   overflow-x: auto;
 }

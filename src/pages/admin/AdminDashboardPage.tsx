@@ -4,10 +4,13 @@ export type AdminDashboardPageProps = {
   today: string
 }
 
+type GoogleSheetTestStepStatus = 'pending' | 'running' | 'success' | 'error'
+
 type GoogleSheetTestStep = {
   name: string
   label: string
   ok: boolean
+  status: GoogleSheetTestStepStatus
   message: string
 }
 
@@ -21,6 +24,11 @@ type GoogleSheetTestResponse = {
   error?: string
   rawError?: string
   stack?: string
+  summary?: {
+    totalSteps: number
+    completedSteps: number
+    failedStepName?: string
+  }
   steps?: GoogleSheetTestStep[]
 }
 
@@ -28,6 +36,13 @@ function AdminDashboardPage({ today }: AdminDashboardPageProps) {
   const [testingConnection, setTestingConnection] = useState(false)
   const [testResult, setTestResult] = useState('ยังไม่ได้ทดสอบการเชื่อมต่อ')
   const [testOk, setTestOk] = useState<boolean | null>(null)
+  const [testSteps, setTestSteps] = useState<GoogleSheetTestStep[]>([
+    { name: 'env_check', label: 'ตรวจ env vars', ok: false, status: 'pending', message: 'รอการทดสอบ' },
+    { name: 'credentials_check', label: 'ตรวจ service account credentials', ok: false, status: 'pending', message: 'รอการทดสอบ' },
+    { name: 'auth_check', label: 'ตรวจ auth', ok: false, status: 'pending', message: 'รอการทดสอบ' },
+    { name: 'spreadsheet_access_check', label: 'ตรวจเข้าถึง spreadsheet', ok: false, status: 'pending', message: 'รอการทดสอบ' },
+    { name: 'sheet_tab_check', label: 'ตรวจ tab ที่ต้องใช้', ok: false, status: 'pending', message: 'รอการทดสอบ' },
+  ])
 
   const classifyGoogleSheetError = (message: string) => {
     const lower = message.toLowerCase()
@@ -51,13 +66,21 @@ function AdminDashboardPage({ today }: AdminDashboardPageProps) {
     return `สาเหตุไม่ชัดเจน: ${message}`
   }
 
-  const renderStepSummary = (steps: GoogleSheetTestStep[]) =>
-    steps.map((step, index) => `${index + 1}. ${step.label}: ${step.ok ? 'ผ่าน' : 'ไม่ผ่าน'} - ${step.message}`).join(' | ')
+  const renderStepStatusLabel = (status: GoogleSheetTestStepStatus) =>
+    status === 'success' ? 'ผ่าน' : status === 'error' ? 'ไม่ผ่าน' : status === 'running' ? 'กำลังตรวจ' : 'รอ'
 
   const handleTestConnection = async () => {
     setTestingConnection(true)
     setTestResult('กำลังทดสอบการเชื่อมต่อ Google Sheets...')
     setTestOk(null)
+    setTestSteps((current) =>
+      current.map((step, index) => ({
+        ...step,
+        ok: false,
+        status: index === 0 ? 'running' : 'pending',
+        message: index === 0 ? 'กำลังเริ่มการทดสอบ' : 'รอการทดสอบ',
+      })),
+    )
 
     try {
       const response = await fetch('/api/admin/google-sheet-test', {
@@ -69,23 +92,33 @@ function AdminDashboardPage({ today }: AdminDashboardPageProps) {
 
       const data = (await response.json()) as GoogleSheetTestResponse
 
+      if (data.steps?.length) {
+        setTestSteps(data.steps)
+      }
+
       if (!response.ok || !data.ok) {
         const errorMessage = data.error || data.message || `HTTP ${response.status}`
         const classifiedError = classifyGoogleSheetError(errorMessage)
         setTestOk(false)
-        setTestResult(
-          `ไม่สามารถเชื่อมต่อ Google Sheets ได้: ${classifiedError}${data.steps?.length ? ` | รายละเอียด: ${renderStepSummary(data.steps)}` : ''}`,
-        )
+        setTestResult(`ไม่สามารถเชื่อมต่อ Google Sheets ได้: ${classifiedError}`)
         return
       }
 
       setTestOk(true)
       setTestResult(
-        `เชื่อมต่อสำเร็จ: ${data.spreadsheetTitle || '-'} | tab: ${data.sheetName || '-'} | พบแท็บ: ${data.sheetExists ? 'ใช่' : 'ไม่พบ'} | จำนวนแท็บ: ${data.sheetCount ?? 0}${data.steps?.length ? ` | รายละเอียด: ${renderStepSummary(data.steps)}` : ''}`,
+        `เชื่อมต่อสำเร็จ: ${data.spreadsheetTitle || '-'} | tab: ${data.sheetName || '-'} | พบแท็บ: ${data.sheetExists ? 'ใช่' : 'ไม่พบ'} | จำนวนแท็บ: ${data.sheetCount ?? 0}`,
       )
     } catch {
       setTestOk(false)
       setTestResult('ไม่สามารถทดสอบการเชื่อมต่อได้')
+      setTestSteps((current) =>
+        current.map((step, index) => ({
+          ...step,
+          ok: false,
+          status: index === 0 ? 'error' : 'pending',
+          message: index === 0 ? 'ไม่สามารถเรียก API ทดสอบได้' : 'รอการทดสอบ',
+        })),
+      )
     } finally {
       setTestingConnection(false)
     }
@@ -144,6 +177,32 @@ function AdminDashboardPage({ today }: AdminDashboardPageProps) {
         <p className={`helper-text ${testOk === false ? 'error-text' : testOk === true ? 'success-text' : ''}`}>
           {testResult}
         </p>
+
+        <div className="diagnostic-progress">
+          <div className="diagnostic-progress__meta">
+            <strong>ความคืบหน้า</strong>
+            <span>
+              ผ่าน {testSteps.filter((step) => step.status === 'success').length} / {testSteps.length} ขั้นตอน
+            </span>
+          </div>
+
+          <div className="diagnostic-steps">
+            {testSteps.map((step, index) => (
+              <div key={step.name} className={`diagnostic-step diagnostic-step--${step.status}`}>
+                <div className="diagnostic-step__index">{index + 1}</div>
+                <div className="diagnostic-step__content">
+                  <div className="diagnostic-step__header">
+                    <strong>{step.label}</strong>
+                    <span className={`status-pill status-${step.status === 'success' ? 'active' : step.status === 'error' ? 'error' : step.status === 'running' ? 'starting' : 'idle'}`}>
+                      {renderStepStatusLabel(step.status)}
+                    </span>
+                  </div>
+                  <p>{step.message}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
     </div>
   )
