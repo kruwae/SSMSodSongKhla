@@ -65,7 +65,6 @@ function parseServiceAccountJson(rawValue: string) {
 }
 
 function getGoogleSheetConfig(): GoogleSheetsConfig {
-  const spreadsheetId = process.env.GOOGLE_SHEET_ID ?? process.env.SHEET_ID
   const serviceAccountJson = process.env.GOOGLE_PRIVATE_KEY_JSON ?? process.env.GOOGLE_SERVICE_ACCOUNT_JSON
   const parsedServiceAccount = serviceAccountJson ? parseServiceAccountJson(serviceAccountJson) : null
 
@@ -76,18 +75,18 @@ function getGoogleSheetConfig(): GoogleSheetsConfig {
 
   const privateKeySource = process.env.GOOGLE_PRIVATE_KEY ?? parsedServiceAccount?.private_key
   const privateKey = privateKeySource ? normalizePrivateKey(privateKeySource) : undefined
-  const rawSheetTab = process.env.GOOGLE_SHEET_TAB
-  const sheetName = rawSheetTab || 'CheckIns'
+  const spreadsheetId = '18H7U7yHebMYUkbhrW2hFIpR_M5xI9TnRcC_rU7ktsC4'
+  const sheetName = 'CheckIns'
   const envChecklist = buildEnvVarChecklist({
     spreadsheetId,
     clientEmail,
     privateKey,
-    sheetName: rawSheetTab,
+    sheetName,
   })
 
-  if (!spreadsheetId || !clientEmail || !privateKey || !rawSheetTab) {
+  if (!clientEmail || !privateKey) {
     throw new Error(
-      `Google Sheets environment variables are not configured. ${envChecklist}. Required: GOOGLE_SHEET_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_SHEET_TAB`,
+      `Google Sheets service account is not configured. ${envChecklist}. Required: GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY`,
     )
   }
 
