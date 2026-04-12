@@ -1,73 +1,79 @@
-# React + TypeScript + Vite
+# SSM Attendance
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Vite + React + TypeScript attendance dashboard deployed on Vercel.
 
-Currently, two official plugins are available:
+## Google Sheets integration
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+This project saves check-in records through a Vercel Serverless Function at:
 
-## React Compiler
+- `POST /api/check-in`
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Required environment variables
 
-## Expanding the ESLint configuration
+Set these in Vercel Project Settings → Environment Variables:
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- `GOOGLE_SHEET_ID`  
+  Spreadsheet ID of the target Google Sheet
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- `GOOGLE_SHEET_TAB`  
+  Sheet tab name to append rows to, default: `CheckIns`
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- `GOOGLE_SERVICE_ACCOUNT_EMAIL`  
+  Service account email that has write access to the spreadsheet
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- `GOOGLE_PRIVATE_KEY`  
+  Private key for the service account  
+  Use the exact private key value and keep newline escapes as `\n`
+
+### Google Sheet column order
+
+The serverless function appends rows in this order:
+
+1. `capturedAt`
+2. `requestId`
+3. `userId`
+4. `fullName`
+5. `role`
+6. `department`
+7. `deviceId`
+8. `imei`
+9. `latitude`
+10. `longitude`
+11. `distanceMeters`
+12. `gpsAccuracy`
+13. `faceVerified`
+14. `locationVerified`
+15. `deviceVerified`
+16. `status`
+17. `reason`
+
+### Security requirements
+
+For maximum security:
+
+- Never expose Google credentials in frontend code
+- Store all secrets only in Vercel environment variables
+- Use the serverless function as the only write path to Google Sheets
+- Validate all request payloads before writing
+- Reject requests without required fields
+- Require `requestId` to help prevent duplicate writes
+- Re-check device, GPS, and approval logic on the server
+- Use HTTPS only
+- Share the spreadsheet only with the service account email
+- Limit spreadsheet access to the minimum required permissions
+- Avoid storing raw face images unless absolutely necessary
+- Prefer storing only verification results and minimal metadata
+
+### Local development
+
+Install dependencies and run:
+
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Build
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+```bash
+npm run build
