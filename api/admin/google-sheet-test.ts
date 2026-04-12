@@ -40,10 +40,15 @@ async function testGoogleSheetConnection() {
     const sheets = createGoogleSheetsClient()
     steps.push(createStep('auth_check', 'ตรวจ auth', true, 'สร้าง Google auth client สำเร็จ'))
 
-    const response = await sheets.spreadsheets.get({
+    const response = (await sheets.spreadsheets.get({
       spreadsheetId: config.spreadsheetId,
       includeGridData: false,
-    })
+    })) as {
+      data: {
+        properties?: { title?: string }
+        sheets?: Array<{ properties?: { title?: string } }>
+      }
+    }
 
     steps.push(
       createStep(

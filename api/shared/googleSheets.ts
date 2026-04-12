@@ -1,4 +1,28 @@
-import { google } from 'googleapis'
+type GoogleSheetsClient = {
+  auth: {
+    JWT: new (options: { email: string; key: string; scopes: string[] }) => unknown
+  }
+  sheets: (options: { version: 'v4'; auth: unknown }) => {
+    spreadsheets: {
+      get: (params: { spreadsheetId: string; includeGridData: boolean }) => Promise<unknown>
+      values: {
+        append: (params: {
+          spreadsheetId: string
+          range: string
+          valueInputOption: string
+          insertDataOption: string
+          requestBody: { values: unknown[][] }
+        }) => Promise<unknown>
+      }
+    }
+  }
+}
+
+declare const google: GoogleSheetsClient
+
+declare const process: {
+  env: Record<string, string | undefined>
+}
 
 export function getGoogleSheetConfig() {
   const spreadsheetId = process.env.GOOGLE_SHEET_ID ?? process.env.SHEET_ID
