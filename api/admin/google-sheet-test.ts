@@ -1,5 +1,20 @@
 import { google } from 'googleapis'
 
+function normalizePrivateKey(privateKey: string) {
+  let normalized = privateKey.trim()
+
+  if (
+    (normalized.startsWith('"') && normalized.endsWith('"')) ||
+    (normalized.startsWith("'") && normalized.endsWith("'"))
+  ) {
+    normalized = normalized.slice(1, -1)
+  }
+
+  normalized = normalized.replace(/\\n/g, '\n')
+
+  return normalized
+}
+
 type DiagnosticStepStatus = 'pending' | 'running' | 'success' | 'error'
 
 type DiagnosticStep = {
@@ -43,8 +58,8 @@ function getGoogleSheetConfig(): GoogleSheetsConfig {
     process.env.GOOGLE_SERVICE_ACCOUNT ??
     parsedServiceAccount?.client_email
 
-  const privateKey =
-    (process.env.GOOGLE_PRIVATE_KEY ?? parsedServiceAccount?.private_key)?.replace(/\\n/g, '\n')
+  const privateKeySource = process.env.GOOGLE_PRIVATE_KEY ?? parsedServiceAccount?.private_key
+  const privateKey = privateKeySource ? normalizePrivateKey(privateKeySource) : undefined
 
   const sheetName = process.env.GOOGLE_SHEET_TAB || 'CheckIns'
 
@@ -52,6 +67,10 @@ function getGoogleSheetConfig(): GoogleSheetsConfig {
     throw new Error(
       'Google Sheets environment variables are not configured. Required: GOOGLE_SHEET_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_PRIVATE_KEY or GOOGLE_PRIVATE_KEY_JSON',
     )
+  }
+
+  if (!privateKey.includes('BEGIN PRIVATE KEY') || !privateKey.includes('END PRIVATE KEY')) {
+    throw new Error('Google private key format is invalid: missing BEGIN PRIVATE KEY / END PRIVATE KEY markers')
   }
 
   return { spreadsheetId, clientEmail, privateKey, sheetName }
@@ -188,10 +207,24 @@ async function testGoogleSheetConnection() {
     ) {
       friendly = 'ตรวจ env vars ไม่ผ่าน'
       steps.push(createStep('env_check', 'ตรวจ env vars', false, message))
-    } else if (lower.includes('private key') || lower.includes('jwt') || lower.includes('invalid_grant') || lower.includes('unauthorized')) {
+    } else if (
+      lower.includes('private key') ||
+      lower.includes('jwt') ||
+      lower.includes('invalid_grant') ||
+      lower.includes('unauthorized') ||
+      lower.includes('pem routines') ||
+      lower.includes('no start line')
+    ) {
       friendly = 'ตรวจ private key format ไม่ผ่าน'
       steps.push(createStep('env_check', 'ตรวจ env vars', true, 'พบค่า env vars แล้ว'))
-      steps.push(createStep('credentials_check', 'ตรวจ service account credentials', false, message))
+      steps.push(
+        createStep(
+          'credentials_check',
+          'ตรวจ service account credentials',
+          false,
+          `${message} — ตรวจสอบว่า GOOGLE_PRIVATE_KEY ใช้ \\n คั่นบรรทัด และระบบแปลงด้วย .replace(/\\\\n/g, "\\n") ถูกต้อง`,
+        ),
+      )
     } else if (lower.includes('permission') || lower.includes('forbidden') || lower.includes('access')) {
       friendly = 'ตรวจสิทธิ์ service account ไม่ผ่าน'
       steps.push(createStep('env_check', 'ตรวจ env vars', true, 'พบค่า env vars แล้ว'))

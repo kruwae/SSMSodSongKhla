@@ -1,5 +1,20 @@
 import { google } from 'googleapis'
 
+function normalizePrivateKey(privateKey: string) {
+  let normalized = privateKey.trim()
+
+  if (
+    (normalized.startsWith('"') && normalized.endsWith('"')) ||
+    (normalized.startsWith("'") && normalized.endsWith("'"))
+  ) {
+    normalized = normalized.slice(1, -1)
+  }
+
+  normalized = normalized.replace(/\\n/g, '\n')
+
+  return normalized
+}
+
 function parseServiceAccountJson(rawValue: string) {
   try {
     const parsed = JSON.parse(rawValue) as {
@@ -25,8 +40,8 @@ export function getGoogleSheetConfig() {
     process.env.GOOGLE_SERVICE_ACCOUNT ??
     parsedServiceAccount?.client_email
 
-  const privateKey =
-    (process.env.GOOGLE_PRIVATE_KEY ?? parsedServiceAccount?.private_key)?.replace(/\\n/g, '\n')
+  const privateKeySource = process.env.GOOGLE_PRIVATE_KEY ?? parsedServiceAccount?.private_key
+  const privateKey = privateKeySource ? normalizePrivateKey(privateKeySource) : undefined
 
   const sheetName = process.env.GOOGLE_SHEET_TAB || 'CheckIns'
 
@@ -34,6 +49,10 @@ export function getGoogleSheetConfig() {
     throw new Error(
       'Google Sheets environment variables are not configured. Required: GOOGLE_SHEET_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_PRIVATE_KEY or GOOGLE_PRIVATE_KEY_JSON',
     )
+  }
+
+  if (!privateKey.includes('BEGIN PRIVATE KEY') || !privateKey.includes('END PRIVATE KEY')) {
+    throw new Error('Google private key format is invalid: missing BEGIN PRIVATE KEY / END PRIVATE KEY markers')
   }
 
   return {
