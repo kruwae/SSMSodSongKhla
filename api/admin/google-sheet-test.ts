@@ -26,6 +26,7 @@ async function testGoogleSheetConnection() {
     spreadsheetTitle: response.data.properties?.title || 'unknown',
     sheetName,
     sheetExists,
+    sheetCount: response.data.sheets?.length ?? 0,
   }
 }
 
@@ -43,6 +44,7 @@ export default async function handler(request: Request) {
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    return json(500, { ok: false, error: message })
+    const stack = error instanceof Error ? error.stack : undefined
+    return json(500, { ok: false, error: message, stack })
   }
 }

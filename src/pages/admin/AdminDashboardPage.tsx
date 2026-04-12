@@ -28,19 +28,23 @@ function AdminDashboardPage({ today }: AdminDashboardPageProps) {
         spreadsheetTitle?: string
         sheetName?: string
         sheetExists?: boolean
+        sheetCount?: number
         error?: string
+        stack?: string
       }
 
       if (!response.ok || !data.ok) {
         const errorMessage = data.error || `HTTP ${response.status}`
         setTestOk(false)
-        setTestResult(`ไม่สามารถเชื่อมต่อ Google Sheets ได้: ${errorMessage}`)
+        setTestResult(
+          `ไม่สามารถเชื่อมต่อ Google Sheets ได้: ${errorMessage}${data.stack ? ` | ${data.stack}` : ''}`,
+        )
         return
       }
 
       setTestOk(true)
       setTestResult(
-        `เชื่อมต่อสำเร็จ: ${data.spreadsheetTitle} | tab: ${data.sheetName} | พบแท็บ: ${data.sheetExists ? 'ใช่' : 'ไม่พบ'}`,
+        `เชื่อมต่อสำเร็จ: ${data.spreadsheetTitle} | tab: ${data.sheetName} | พบแท็บ: ${data.sheetExists ? 'ใช่' : 'ไม่พบ'} | จำนวนแท็บ: ${data.sheetCount ?? 0}`,
       )
     } catch {
       setTestOk(false)
