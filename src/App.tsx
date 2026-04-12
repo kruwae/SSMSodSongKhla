@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import RoleNav from './components/RoleNav'
+import AdminDashboardPage from './pages/admin/AdminDashboardPage'
 import AdminDevicesPage from './pages/admin/AdminDevicesPage'
 import AdminLocationsPage from './pages/admin/AdminLocationsPage'
 import AdminUsersPage from './pages/admin/AdminUsersPage'
@@ -9,20 +10,7 @@ import UserDashboardPage from './pages/user/UserDashboardPage'
 import UserHistoryPage from './pages/user/UserHistoryPage'
 import './App.css'
 
-type StatCard = {
-  label: string
-  value: string
-  delta: string
-}
-
 type AppRole = 'user' | 'admin'
-
-const stats: StatCard[] = [
-  { label: 'ผู้ลงทะเบียนวันนี้', value: '128', delta: '+12 จากเมื่อวาน' },
-  { label: 'ลงเวลาสำเร็จ', value: '114', delta: 'อัปเดตล่าสุด 2 นาทีที่แล้ว' },
-  { label: 'สาย', value: '9', delta: 'ต้องติดตามผล' },
-  { label: 'ขาดงาน', value: '5', delta: 'รอการยืนยัน' },
-]
 
 export function ProtectedRoute({ role }: { role: AppRole }) {
   const location = useLocation()
@@ -124,31 +112,6 @@ function RouteShell({ role }: { role: AppRole }) {
   )
 }
 
-function AdminDashboardPage() {
-  return (
-    <>
-      <section className="stats-grid">
-        {stats.map((stat) => (
-          <article className="stat-card" key={stat.label}>
-            <p>{stat.label}</p>
-            <h3>{stat.value}</h3>
-            <span>{stat.delta}</span>
-          </article>
-        ))}
-      </section>
-
-      <section className="panel summary-panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Admin Overview</p>
-            <h3>ภาพรวมผู้ดูแลระบบ</h3>
-          </div>
-        </div>
-        <p className="helper-text">หน้านี้เป็น shell สำหรับฝั่งแอดมิน และยังคงโครงสร้างเดิมของแอปไว้</p>
-      </section>
-    </>
-  )
-}
 
 function App() {
   return <AppRoutes />
@@ -169,7 +132,12 @@ export function AppRoutes() {
       </Route>
       <Route element={<ProtectedRoute role="admin" />}>
         <Route path="/admin" element={<RouteShell role="admin" />}>
-          <Route index element={<AdminDashboardPage />} />
+          <Route index element={<AdminDashboardPage today={new Date().toLocaleDateString('th-TH', {
+            weekday: 'long',
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+          })} />} />
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="devices" element={<AdminDevicesPage />} />
           <Route path="locations" element={<AdminLocationsPage />} />
