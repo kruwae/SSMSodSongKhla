@@ -91,7 +91,15 @@ function AdminDashboardPage({ today }: AdminDashboardPageProps) {
       })
 
       const rawText = await response.text()
-      const data = rawText ? (JSON.parse(rawText) as GoogleSheetTestResponse) : null
+      let data: GoogleSheetTestResponse | null = null
+
+      if (rawText) {
+        try {
+          data = JSON.parse(rawText) as GoogleSheetTestResponse
+        } catch {
+          data = null
+        }
+      }
 
       if (data?.steps?.length) {
         setTestSteps(data.steps)
