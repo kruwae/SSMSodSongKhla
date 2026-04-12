@@ -15,6 +15,13 @@ import {
 } from '../services/checkInService'
 import { apiClient } from '../services/api'
 
+const serviceUnitLocationMap: Record<string, { lat: number; lng: number }> = {
+  อาคารสำนักงานหลัก: { lat: 6.56405379821, lng: 101.38833639069 },
+  'หน่วยบริการ A': { lat: 6.56405379821, lng: 101.38833639069 },
+  'หน่วยบริการ B': { lat: 6.56405379821, lng: 101.38833639069 },
+  'Work From Home': { lat: 6.647581014685428, lng: 101.30647939321433 },
+}
+
 const checkInService = createCheckInService({
   schoolLat: DEFAULT_SCHOOL_LAT,
   schoolLng: DEFAULT_SCHOOL_LNG,
@@ -153,11 +160,19 @@ function reducer(state: CheckInState, action: CheckInAction): CheckInState {
         ...state,
         deviceInput: action.value,
       }
-    case 'SERVICE_UNIT_CHANGED':
+    case 'SERVICE_UNIT_CHANGED': {
+      const mappedLocation = serviceUnitLocationMap[action.value]
       return {
         ...state,
         serviceUnit: action.value,
+        currentCoords: mappedLocation
+          ? { lat: mappedLocation.lat, lng: mappedLocation.lng }
+          : null,
+        gpsMessage: mappedLocation
+          ? `พิกัดอ้างอิงของหน่วยบริการ: ${mappedLocation.lat.toFixed(12)}, ${mappedLocation.lng.toFixed(12)}`
+          : 'ยังไม่ได้ตรวจจับตำแหน่ง',
       }
+    }
     case 'REGISTER_DEVICE':
       return {
         ...state,
