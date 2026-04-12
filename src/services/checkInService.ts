@@ -155,3 +155,7 @@ export function createCheckInService(deps: CheckInServiceDeps) {
       `อุปกรณ์ไม่ตรงกับที่ลงทะเบียนไว้ | หน่วยบริการเดิม: ${device.serviceUnit} | รอแอดมินยืนยัน`,
   }
 }
+
+export function buildDeviceMismatchMessage(device: RegisteredDevice) {
+  return `อุปกรณ์ไม่ตรงกับที่ลงทะเบียนไว้ | หน่วยบริการเดิม: ${device.serviceUnit} | รอแอดมินยืนยัน`
+}

@@ -41,9 +41,10 @@ describe('checkInService', () => {
         altitudeAccuracy: null,
         heading: null,
         speed: null,
+        toJSON: () => ({}),
       },
       timestamp: 0,
-    })
+    } as GeolocationPosition)
 
     expect(result.ok).toBe(true)
     expect(result.step).toBe('deviceCode')
