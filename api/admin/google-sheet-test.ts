@@ -1,4 +1,4 @@
-import { google } from 'googleapis'
+import { createGoogleSheetsClient, getGoogleSheetConfig } from '../shared/googleSheets'
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -11,28 +11,16 @@ function json(status: number, body: unknown) {
 }
 
 async function testGoogleSheetConnection() {
-  const spreadsheetId = process.env.GOOGLE_SHEET_ID
-  const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n')
-  const sheetName = process.env.GOOGLE_SHEET_TAB || 'CheckIns'
-
-  if (!spreadsheetId || !clientEmail || !privateKey) {
-    throw new Error('Google Sheets environment variables are not configured')
-  }
-
-  const auth = new google.auth.JWT({
-    email: clientEmail,
-    key: privateKey,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-  })
-
-  const sheets = google.sheets({ version: 'v4', auth })
+  const { spreadsheetId, sheetName } = getGoogleSheetConfig()
+  const sheets = createGoogleSheetsClient()
   const response = await sheets.spreadsheets.get({
     spreadsheetId,
     includeGridData: false,
   })
 
-  const sheetExists = response.data.sheets?.some((sheet) => sheet.properties?.title === sheetName) ?? false
+  const sheetExists = response.data.sheets?.some(
+    (sheet: { properties?: { title?: string } }) => sheet.properties?.title === sheetName,
+  ) ?? false
 
   return {
     spreadsheetTitle: response.data.properties?.title || 'unknown',

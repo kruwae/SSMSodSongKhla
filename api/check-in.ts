@@ -1,4 +1,4 @@
-import { google } from 'googleapis'
+import { createGoogleSheetsClient, getGoogleSheetConfig } from './shared/googleSheets'
 
 type CheckInRequest = {
   requestId: string
@@ -77,21 +77,8 @@ function validatePayload(payload: unknown): { ok: true; data: CheckInRequest } |
 }
 
 async function appendToSheet(row: CheckInRequest) {
-  const spreadsheetId = process.env.GOOGLE_SHEET_ID
-  const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n')
-  const sheetName = process.env.GOOGLE_SHEET_TAB || 'CheckIns'
-  if (!spreadsheetId || !clientEmail || !privateKey) {
-    throw new Error('Google Sheets environment variables are not configured')
-  }
-
-  const auth = new google.auth.JWT({
-    email: clientEmail,
-    key: privateKey,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  })
-
-  const sheets = google.sheets({ version: 'v4', auth })
+  const { spreadsheetId, sheetName } = getGoogleSheetConfig()
+  const sheets = createGoogleSheetsClient()
   await sheets.spreadsheets.values.append({
     spreadsheetId,
     range: `${sheetName}!A:Z`,
