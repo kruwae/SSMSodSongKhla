@@ -108,6 +108,22 @@ function createGoogleSheetsClient() {
   return google.sheets({ version: 'v4', auth })
 }
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs)
+    promise.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (error) => {
+        clearTimeout(timer)
+        reject(error)
+      },
+    )
+  })
+}
+
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
@@ -175,10 +191,14 @@ async function testGoogleSheetConnection() {
     const sheets = createGoogleSheetsClient()
     steps.push(createStep('auth_check', 'ตรวจ auth', true, 'สร้าง Google auth client สำเร็จ'))
 
-    const response = (await sheets.spreadsheets.get({
-      spreadsheetId: config.spreadsheetId,
-      includeGridData: false,
-    })) as {
+    const response = (await withTimeout(
+      sheets.spreadsheets.get({
+        spreadsheetId: config.spreadsheetId,
+        includeGridData: false,
+      }),
+      8000,
+      'Google Sheets request timeout: ใช้เวลานานเกิน 8 วินาที',
+    )) as {
       data: {
         properties?: { title?: string }
         sheets?: Array<{ properties?: { title?: string } }>
@@ -252,6 +272,12 @@ async function testGoogleSheetConnection() {
           `${message} — ตรวจสอบว่า GOOGLE_PRIVATE_KEY ใช้ \\n คั่นบรรทัด และระบบแปลงด้วย .replace(/\\\\n/g, "\\n") ถูกต้อง`,
         ),
       )
+    } else if (lower.includes('timeout') || lower.includes('timed out')) {
+      friendly = 'การเชื่อมต่อ Google Sheets หมดเวลา'
+      steps.push(createStep('env_check', 'ตรวจ env vars', true, 'พบค่า env vars แล้ว'))
+      steps.push(createStep('credentials_check', 'ตรวจ service account credentials', true, 'สร้าง credential ได้แล้ว'))
+      steps.push(createStep('auth_check', 'ตรวจ auth', true, 'auth client ถูกสร้างแล้ว'))
+      steps.push(createStep('spreadsheet_access_check', 'ตรวจเข้าถึง spreadsheet', false, message))
     } else if (lower.includes('permission') || lower.includes('forbidden') || lower.includes('access')) {
       friendly = 'ตรวจสิทธิ์ service account ไม่ผ่าน'
       steps.push(createStep('env_check', 'ตรวจ env vars', true, 'พบค่า env vars แล้ว'))
