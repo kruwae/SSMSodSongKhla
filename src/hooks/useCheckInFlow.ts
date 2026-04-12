@@ -162,9 +162,11 @@ function reducer(state: CheckInState, action: CheckInAction): CheckInState {
       return {
         ...state,
         registeredDevice: action.device,
-        deviceVerified: true,
+        deviceVerified: false,
         deviceChangePending: false,
         adminApprovalGranted: false,
+        imeiChecked: false,
+        signInStep: 'deviceCode',
         deviceApprovalMessage: `บันทึกอุปกรณ์เริ่มต้นแล้ว: ${action.device.name} (${action.device.imei}) | หน่วยบริการ: ${action.device.serviceUnit}`,
         cameraMessage: action.message,
       }
@@ -173,8 +175,10 @@ function reducer(state: CheckInState, action: CheckInAction): CheckInState {
         ...state,
         deviceVerified: true,
         deviceChangePending: false,
+        adminApprovalGranted: true,
+        imeiChecked: true,
         deviceApprovalMessage: 'อุปกรณ์ตรงกับที่ลงทะเบียนไว้ ใช้งานได้',
-        signInStep: 'submitting',
+        signInStep: 'idle',
         cameraMessage: action.message,
       }
     case 'DEVICE_MISMATCH':
@@ -192,6 +196,8 @@ function reducer(state: CheckInState, action: CheckInAction): CheckInState {
         adminApprovalGranted: true,
         deviceVerified: true,
         deviceChangePending: false,
+        imeiChecked: true,
+        signInStep: 'idle',
         deviceApprovalMessage: 'แอดมินยืนยันการเปลี่ยนแปลงอุปกรณ์แล้ว',
         cameraMessage: action.message,
         registeredDevice: action.device,
@@ -222,6 +228,7 @@ function reducer(state: CheckInState, action: CheckInAction): CheckInState {
       return {
         ...state,
         checkedIn: state.checkedIn + 1,
+        locationVerified: true,
         signInStep: 'success',
         cameraStatus: 'active',
         cameraMessage: 'ลงชื่อสำเร็จ',
@@ -307,6 +314,11 @@ export function useCheckInFlow() {
       return
     }
 
+    if (!state.serviceUnit.trim()) {
+      dispatch({ type: 'CAMERA_ERROR', message: 'กรุณาเลือกหน่วยบริหารก่อนยืนยันรหัสเครื่อง' })
+      return
+    }
+
     if (!state.registeredDevice) {
       dispatch({
         type: 'DEVICE_MISMATCH',
@@ -319,29 +331,8 @@ export function useCheckInFlow() {
     if (input === state.registeredDevice.imei) {
       dispatch({
         type: 'DEVICE_VERIFIED',
-        message: 'ตรวจสอบอุปกรณ์ผ่านแล้ว กำลังส่งลงชื่อเข้าใช้งาน...',
+        message: 'ตรวจสอบอุปกรณ์ผ่านแล้ว สามารถเปิดกล้องและลงชื่อทำงานได้',
       })
-
-      if (signInTimerRef.current !== null) {
-        window.clearTimeout(signInTimerRef.current)
-      }
-
-      signInTimerRef.current = window.setTimeout(async () => {
-        dispatch({ type: 'CHECKED_IN_INCREMENTED' })
-
-        const payload: CheckInSnapshot = checkInService.buildSavePayload({
-          deviceId: state.registeredDevice?.id ?? '',
-          imei: input,
-          imeiChecked: true,
-          faceVerified: state.faceVerified,
-          locationVerified: state.locationVerified,
-          adminApprovalGranted: state.adminApprovalGranted,
-          gpsMessage: state.gpsMessage,
-          distanceMeters: state.distanceMeters,
-          serviceUnit: state.registeredDevice?.serviceUnit || state.serviceUnit,
-        })
-        await apiClient.saveCheckIn(payload)
-      }, 800)
       return
     }
 
@@ -449,6 +440,14 @@ export function useCheckInFlow() {
   }
 
   const captureFace = () => {
+    if (!state.registeredDevice || !state.deviceVerified) {
+      dispatch({
+        type: 'CAMERA_ERROR',
+        message: 'ต้องลงทะเบียนเครื่องและยืนยันรหัสเครื่องให้ผ่านก่อน',
+      })
+      return
+    }
+
     dispatch({
       type: 'FACE_VERIFIED',
       message: 'สแกนใบหน้าผ่านแล้ว กำลังตรวจ GPS...',
@@ -483,6 +482,7 @@ export function useCheckInFlow() {
       })
       const response = await apiClient.saveCheckIn(payload)
       if (!response.saved) throw new Error(response.message)
+      dispatch({ type: 'CHECKED_IN_INCREMENTED' })
       dispatch({ type: 'SAVE_SUCCESS', message: 'บันทึกข้อมูลลงเซิร์ฟเวอร์สำเร็จ' })
     } catch {
       dispatch({ type: 'SAVE_ERROR', message: 'บันทึกข้อมูลลงเซิร์ฟเวอร์ไม่สำเร็จ' })

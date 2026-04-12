@@ -50,9 +50,9 @@ function UserCheckInPage() {
     saveStatus === 'idle' ? 'รอบันทึก' : saveStatus === 'saving' ? 'กำลังบันทึก' : saveStatus === 'saved' ? 'บันทึกแล้ว' : 'บันทึกไม่สำเร็จ'
   const helperText = registeredDevice
     ? signInStep === 'deviceCode'
-      ? 'กรอกรหัสอุปกรณ์/IMEI ที่ลงทะเบียนไว้ หากไม่ตรงกับอุปกรณ์เดิม ระบบจะขึ้นสถานะรอแอดมินยืนยัน'
-      : 'ต้องผ่านใบหน้าและ GPS ก่อนจึงจะกรอกรหัสอุปกรณ์ได้'
-    : 'ต้องลงทะเบียนอุปกรณ์และระบุหน่วยบริการก่อน จึงจะเริ่มลงชื่อทำงานได้'
+      ? 'กรอกรหัสอุปกรณ์/IMEI ที่ลงทะเบียนไว้ จากนั้นจึงเปิดกล้องและลงชื่อทำงาน'
+      : 'ลงทะเบียนเครื่องและระบุหน่วยบริการแล้ว ขั้นตอนถัดไปคือกรอกรหัสเครื่อง'
+    : 'เริ่มจากลงทะเบียนเครื่อง แล้วเลือกหน่วยบริหารก่อนดำเนินการขั้นต่อไป'
 
   return (
     <div className="index-page">
@@ -98,18 +98,24 @@ function UserCheckInPage() {
           <div className="panel-heading">
             <div>
               <p className="eyebrow">Action</p>
-              <h3>กดปุ่มนี้เพื่อเริ่มลงชื่อเข้าทำงาน</h3>
+              <h3>ขั้นตอนลงชื่อทำงานตามลำดับใหม่</h3>
             </div>
           </div>
           <div className="panel-actions">
-            <button type="button" className="primary-button" onClick={startCamera} disabled={cameraStatus === 'starting'}>
-              เปิดกล้องสำหรับลงชื่อเข้าทำงาน
+            <button type="button" className="secondary-button" onClick={registerDevice} disabled={!!registeredDevice || !serviceUnit.trim()}>
+              {registeredDevice ? 'ลงทะเบียนเครื่องแล้ว' : '1. ลงทะเบียนเครื่อง'}
             </button>
-            <button type="button" className="secondary-button" onClick={captureFace} disabled={signInStep !== 'face' || cameraStatus !== 'active'}>
-              ลงชื่อเข้าทำงาน
+            <button type="button" className="secondary-button" onClick={requestDeviceVerification} disabled={!registeredDevice || !deviceInput.trim()}>
+              3. ยืนยันรหัสเครื่อง
+            </button>
+            <button type="button" className="primary-button" onClick={startCamera} disabled={!registeredDevice || !deviceInput.trim() || cameraStatus === 'starting'}>
+              4. เปิดกล้อง
+            </button>
+            <button type="button" className="primary-button" onClick={captureFace} disabled={signInStep !== 'face' || cameraStatus !== 'active'}>
+              5. ลงชื่อทำงาน
             </button>
           </div>
-          <p className="helper-text">เมื่อเปิดกล้องแล้ว ระบบจะตรวจใบหน้า + GPS + IMEI ของอุปกรณ์ตามลำดับ</p>
+          <p className="helper-text">ลำดับใหม่: 1) ลงทะเบียนเครื่อง 2) เลือกหน่วยบริหาร 3) ใส่รหัสเครื่อง 4) เปิดกล้อง 5) ลงชื่อทำงาน</p>
         </section>
 
         <section className="content-grid">
@@ -125,15 +131,23 @@ function UserCheckInPage() {
             <div className="stepper">
               <div className={`step ${signInStep === 'face' || faceVerified ? 'done' : ''}`}>
                 <strong>1</strong>
-                <span>สแกนใบหน้า</span>
+                <span>ลงทะเบียนเครื่อง</span>
               </div>
-              <div className={`step ${(signInStep === 'location' || locationVerified || deviceVerified) ? 'done' : ''}`}>
+              <div className={`step ${serviceUnit ? 'done' : ''}`}>
                 <strong>2</strong>
-                <span>ตรวจ GPS ≤ 70 ม.</span>
+                <span>เลือกหน่วยบริหาร</span>
               </div>
-              <div className={`step ${deviceVerified ? 'done' : ''}`}>
+              <div className={`step ${deviceInput.trim() ? 'done' : ''}`}>
                 <strong>3</strong>
-                <span>รหัสโทรศัพท์/เครื่อง</span>
+                <span>ใส่รหัสเครื่อง</span>
+              </div>
+              <div className={`step ${cameraStatus === 'active' || faceVerified ? 'done' : ''}`}>
+                <strong>4</strong>
+                <span>เปิดกล้อง</span>
+              </div>
+              <div className={`step ${checkedIn > 32 || faceVerified ? 'done' : ''}`}>
+                <strong>5</strong>
+                <span>ลงชื่อทำงาน</span>
               </div>
             </div>
 
@@ -180,19 +194,23 @@ function UserCheckInPage() {
             </div>
 
             <div className="device-code-box">
-              <label htmlFor="service-unit">ระบุหน่วยบริการ</label>
-              <input
+              <label htmlFor="service-unit">2. เลือกหน่วยบริหาร</label>
+              <select
                 id="service-unit"
-                type="text"
                 value={serviceUnit}
                 onChange={(event) => setServiceUnit(event.target.value)}
-                placeholder="เช่น หน่วยบริการ A"
                 disabled={!!registeredDevice}
-              />
+              >
+                <option value="">-- เลือกหน่วยบริหาร --</option>
+                <option value="อาคารสำนักงานหลัก">อาคารสำนักงานหลัก</option>
+                <option value="หน่วยบริการ A">หน่วยบริการ A</option>
+                <option value="หน่วยบริการ B">หน่วยบริการ B</option>
+                <option value="Work From Home">Work From Home</option>
+              </select>
             </div>
 
             <div className="device-code-box">
-              <label htmlFor="device-code">IMEI / รหัสอุปกรณ์ที่ลงทะเบียน</label>
+              <label htmlFor="device-code">3. ใส่รหัสเครื่อง / IMEI ที่ลงทะเบียน</label>
               <input
                 id="device-code"
                 type="text"
