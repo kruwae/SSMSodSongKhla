@@ -9,6 +9,28 @@ function AdminDashboardPage({ today }: AdminDashboardPageProps) {
   const [testResult, setTestResult] = useState<string>('ยังไม่ได้ทดสอบการเชื่อมต่อ')
   const [testOk, setTestOk] = useState<boolean | null>(null)
 
+  const classifyGoogleSheetError = (message: string) => {
+    const lower = message.toLowerCase()
+    if (
+      lower.includes('not configured') ||
+      lower.includes('process is not defined') ||
+      lower.includes('env') ||
+      lower.includes('environment')
+    ) {
+      return 'ปัญหา env var: ตรวจสอบค่า SHEET_ID, GOOGLE_SERVICE_ACCOUNT, GOOGLE_PRIVATE_KEY และ GOOGLE_SHEET_TAB'
+    }
+    if (lower.includes('private key') || lower.includes('jwt') || lower.includes('invalid_grant') || lower.includes('unauthorized')) {
+      return 'ปัญหา private key format: ตรวจสอบว่า GOOGLE_PRIVATE_KEY มีคีย์ครบและ newline ถูกต้องเป็น \\n'
+    }
+    if (lower.includes('permission') || lower.includes('forbidden') || lower.includes('access')) {
+      return 'ปัญหาสิทธิ์ service account: ตรวจสอบว่าชีตถูกแชร์ให้ service account แล้ว และมีสิทธิ์เข้าถึง'
+    }
+    if (lower.includes('googleapis') || lower.includes('module not found')) {
+      return 'ปัญหา googleapis runtime dependency: ตรวจสอบว่าได้ติดตั้ง googleapis และ deploy ใหม่แล้ว'
+    }
+    return `สาเหตุไม่ชัดเจน: ${message}`
+  }
+
   const handleTestConnection = async () => {
     setTestingConnection(true)
     setTestResult('กำลังทดสอบการเชื่อมต่อ Google Sheets...')
@@ -35,10 +57,9 @@ function AdminDashboardPage({ today }: AdminDashboardPageProps) {
 
       if (!response.ok || !data.ok) {
         const errorMessage = data.error || `HTTP ${response.status}`
+        const classifiedError = classifyGoogleSheetError(errorMessage)
         setTestOk(false)
-        setTestResult(
-          `ไม่สามารถเชื่อมต่อ Google Sheets ได้: ${errorMessage}${data.stack ? ` | ${data.stack}` : ''}`,
-        )
+        setTestResult(`ไม่สามารถเชื่อมต่อ Google Sheets ได้: ${classifiedError}`)
         return
       }
 
