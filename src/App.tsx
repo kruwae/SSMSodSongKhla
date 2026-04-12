@@ -1,164 +1,42 @@
-import { useMemo, useState } from 'react'
-import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import RoleNav from './components/RoleNav'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { AppErrorBoundary } from './components/AppErrorBoundary'
+import AdminLayout from './layouts/AdminLayout'
+import EmployeeLayout from './layouts/EmployeeLayout'
+import LoginPage from './pages/LoginPage'
 import AdminDashboardPage from './pages/admin/AdminDashboardPage'
+import AdminOfficesPage from './pages/admin/AdminOfficesPage'
+import AdminEmployeesPage from './pages/admin/AdminEmployeesPage'
 import AdminDevicesPage from './pages/admin/AdminDevicesPage'
-import AdminLocationsPage from './pages/admin/AdminLocationsPage'
-import AdminUsersPage from './pages/admin/AdminUsersPage'
-import UserCheckInPage from './pages/user/UserCheckInPage'
-import UserDashboardPage from './pages/user/UserDashboardPage'
-import UserHistoryPage from './pages/user/UserHistoryPage'
-import './App.css'
+import AdminAttendancePage from './pages/admin/AdminAttendancePage'
+import AdminLeavesPage from './pages/admin/AdminLeavesPage'
+import AdminNotificationsPage from './pages/admin/AdminNotificationsPage'
+import EmployeeHomePage from './pages/employee/EmployeeHomePage'
+import EmployeeAttendancePage from './pages/employee/EmployeeAttendancePage'
+import EmployeeLeavePage from './pages/employee/EmployeeLeavePage'
+import EmployeeProfilePage from './pages/employee/EmployeeProfilePage'
 
-type AppRole = 'user' | 'admin'
-
-export function ProtectedRoute({ role }: { role: AppRole }) {
-  const location = useLocation()
-  const pathname = location.pathname
-
-  if (role === 'user' && !pathname.startsWith('/user')) {
-    return <Navigate to="/user" replace />
-  }
-
-  if (role === 'admin' && !pathname.startsWith('/admin')) {
-    return <Navigate to="/admin" replace />
-  }
-
-  return <Outlet />
-}
-
-function LoginPage() {
-  const navigate = useNavigate()
-
+export default function App() {
   return (
-    <div className="index-page">
-      <main className="main-content">
-        <section className="panel summary-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Login</p>
-              <h3>เลือกการใช้งาน</h3>
-            </div>
-          </div>
-          <div className="panel-actions">
-            <button type="button" className="primary-button" onClick={() => navigate('/user')}>
-              เข้าสู่ระบบผู้ใช้งาน
-            </button>
-            <button type="button" className="secondary-button" onClick={() => navigate('/admin')}>
-              เข้าสู่ระบบผู้ดูแลระบบ
-            </button>
-          </div>
-        </section>
-      </main>
-    </div>
-  )
-}
-
-function RouteShell({ role }: { role: AppRole }) {
-  const location = useLocation()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const isAdmin = role === 'admin'
-  const today = useMemo(() => {
-    return new Date().toLocaleDateString('th-TH', {
-      weekday: 'long',
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-    })
-  }, [])
-
-  return (
-    <div className={`index-page${sidebarOpen ? ' sidebar-open' : ''}`}>
-      <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
-      <aside className={`sidebar${sidebarOpen ? ' open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="brand-mark">SSM</div>
-          <div>
-            <h1>Attendance</h1>
-            <p>{isAdmin ? 'ระบบผู้ดูแล' : 'ระบบผู้ใช้งาน'}</p>
-          </div>
-        </div>
-
-        <RoleNav
-          mode={isAdmin ? 'admin' : 'user'}
-          activePath={location.pathname}
-          onNavigate={() => undefined}
-        />
-
-        <div className="sidebar-card">
-          <p className="sidebar-card-label">สถานะระบบ</p>
-          <strong>{isAdmin ? 'Admin mode' : 'User mode'}</strong>
-          <span>{today}</span>
-        </div>
-      </aside>
-
-      <main className="main-content">
-        <header className="topbar">
-          <button
-            type="button"
-            className="menu-button"
-            aria-label={sidebarOpen ? 'ปิดเมนู' : 'เปิดเมนู'}
-            aria-expanded={sidebarOpen}
-            onClick={() => setSidebarOpen((open) => !open)}
-          >
-            ☰
-          </button>
-          <div>
-            <p className="eyebrow">{isAdmin ? 'Admin Routing' : 'User Routing'}</p>
-            <h2>{isAdmin ? 'หน้าผู้ดูแลระบบ' : 'หน้าผู้ใช้งาน'}</h2>
-          </div>
-          <div className="topbar-meta">
-            <span>{today}</span>
-          </div>
-        </header>
-
-        <Outlet />
-      </main>
-    </div>
-  )
-}
-
-function App() {
-  return <AppRoutes />
-}
-
-export function AppRoutes() {
-  return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route element={<ProtectedRoute role="user" />}>
-        <Route path="/user" element={<RouteShell role="user" />}>
-          <Route index element={<UserDashboardPage />} />
-          <Route path="check-in" element={<UserCheckInPage />} />
-          <Route path="history" element={<UserHistoryPage />} />
-          <Route path="*" element={<Navigate to="/user" replace />} />
-        </Route>
-      </Route>
-      <Route element={<ProtectedRoute role="admin" />}>
-        <Route path="/admin" element={<RouteShell role="admin" />}>
-          <Route
-            index
-            element={
-              <AdminDashboardPage
-                today={new Date().toLocaleDateString('th-TH', {
-                  weekday: 'long',
-                  day: '2-digit',
-                  month: 'long',
-                  year: 'numeric',
-                })}
-              />
-            }
-          />
-          <Route path="users" element={<AdminUsersPage />} />
+    <AppErrorBoundary>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="offices" element={<AdminOfficesPage />} />
+          <Route path="employees" element={<AdminEmployeesPage />} />
           <Route path="devices" element={<AdminDevicesPage />} />
-          <Route path="locations" element={<AdminLocationsPage />} />
-          <Route path="*" element={<Navigate to="/admin" replace />} />
+          <Route path="attendance" element={<AdminAttendancePage />} />
+          <Route path="leaves" element={<AdminLeavesPage />} />
+          <Route path="notifications" element={<AdminNotificationsPage />} />
         </Route>
-      </Route>
-      <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+        <Route path="/employee" element={<EmployeeLayout />}>
+          <Route index element={<EmployeeHomePage />} />
+          <Route path="attendance" element={<EmployeeAttendancePage />} />
+          <Route path="leave" element={<EmployeeLeavePage />} />
+          <Route path="profile" element={<EmployeeProfilePage />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </AppErrorBoundary>
   )
 }
-
-export default App

@@ -1,94 +1,62 @@
-# SSM Attendance
+# attendanceSodSongKhla
 
-Vite + React + TypeScript attendance dashboard deployed on Vercel.
+Production-ready attendance system foundation built with Vite + React + TypeScript, Supabase, and a Tailwind-friendly component architecture.
 
-## Available scripts
+## Supabase setup
 
-- `npm run dev` — start the Vite dev server
-- `npm run build` — type-check and build the app for production
-- `npm run lint` — run ESLint across the project
-- `npm run test` — run Vitest once
-- `npm run test:watch` — run Vitest in watch mode
-- `npm run preview` — preview the production build locally
+1. Create a Supabase project.
+2. Copy `.env.example` to `.env` and fill in your project values.
+3. Apply the initial schema migration:
+   - `supabase/migrations/001_init.sql`
+4. Ensure the following are configured in Supabase:
+   - Authentication enabled
+   - Email sign-in or your preferred auth provider
+   - RLS enabled on the application tables
+   - A scheduled job or Edge Function for QR token cleanup if you want automatic housekeeping
 
-## Google Sheets integration
+## Database migration
 
-This project saves check-in records through a Vercel Serverless Function at:
+The initial migration creates:
 
-- `POST /api/check-in`
+- `departments`
+- `offices`
+- `profiles`
+- `devices`
+- `shifts`
+- `attendance_records`
+- `leave_requests`
+- `notifications`
+- `qr_tokens`
 
-### Required environment variables
+It also includes:
 
-Set these in Vercel Project Settings → Environment Variables:
+- Row Level Security policies
+- indexes and constraints
+- update timestamp triggers
+- `handle_new_user()` auth bootstrap trigger
+- `calculate_work_hours()` attendance helper
+- `detect_late_status()` lateness helper
+- `cleanup_expired_qr_tokens()` maintenance helper
+- seed data for one default department and one office
 
-- `GOOGLE_SHEET_ID`  
-  Spreadsheet ID of the target Google Sheet
+## Admin bootstrap
 
-- `GOOGLE_SHEET_TAB`  
-  Sheet tab name to append rows to, default: `CheckIns`
+The default bootstrap flow is designed so the first authenticated user can be promoted to admin by updating their profile in Supabase:
 
-- `GOOGLE_SERVICE_ACCOUNT_EMAIL`  
-  Service account email that has write access to the spreadsheet
+1. Sign up or invite the first user.
+2. In the Supabase SQL editor, promote the profile:
+   - `update public.profiles set role = 'admin' where id = '<auth-user-uuid>';`
+3. Optionally assign that admin to the seeded department and office.
+4. From that point on, the admin can manage departments, offices, employees, devices, attendance, leaves, and notifications.
 
-- `GOOGLE_PRIVATE_KEY`  
-  Private key for the service account  
-  Use the exact private key value and keep newline escapes as `\n`
+### Recommended bootstrap checklist
 
-### Google Sheet column order
+- Update the seeded office address, coordinates, and radius to match your real site.
+- Create additional departments/offices before onboarding employees.
+- Review RLS policies before opening production access.
+- Set up a scheduled cleanup for expired QR tokens if you plan to use QR-based check-in.
 
-The serverless function appends rows in this order:
+## Notes
 
-1. `capturedAt`
-2. `requestId`
-3. `userId`
-4. `fullName`
-5. `role`
-6. `department`
-7. `deviceId`
-8. `imei`
-9. `latitude`
-10. `longitude`
-11. `distanceMeters`
-12. `gpsAccuracy`
-13. `faceVerified`
-14. `locationVerified`
-15. `deviceVerified`
-16. `status`
-17. `reason`
-
-### Security requirements
-
-For maximum security:
-
-- Never expose Google credentials in frontend code
-- Store all secrets only in Vercel environment variables
-- Use the serverless function as the only write path to Google Sheets
-- Validate all request payloads before writing
-- Reject requests without required fields
-- Require `requestId` to help prevent duplicate writes
-- Re-check device, GPS, and approval logic on the server
-- Use HTTPS only
-- Share the spreadsheet only with the service account email
-- Limit spreadsheet access to the minimum required permissions
-- Avoid storing raw face images unless absolutely necessary
-- Prefer storing only verification results and minimal metadata
-
-### Local development
-
-Install dependencies and run:
-
-```bash
-npm install
-npm run dev
-```
-
-### Build
-
-```bash
-npm run build
-```
-
-### Test
-
-```bash
-npm run test
+- QR token generation is represented at the database layer by helper functions, but the actual issuance flow should be handled by an Edge Function or server-side endpoint.
+- This repository is intended as a foundation; feature pages and API integration are expected to be expanded alongside the Supabase schema.# SSMSodSongKhla
