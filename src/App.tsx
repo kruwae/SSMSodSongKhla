@@ -157,12 +157,14 @@ function App() {
 export function AppRoutes() {
   return (
     <Routes>
+      <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute role="user" />}>
         <Route path="/user" element={<RouteShell role="user" />}>
           <Route index element={<UserDashboardPage />} />
           <Route path="check-in" element={<UserCheckInPage />} />
           <Route path="history" element={<UserHistoryPage />} />
+          <Route path="*" element={<Navigate to="/user" replace />} />
         </Route>
       </Route>
       <Route element={<ProtectedRoute role="admin" />}>
@@ -171,6 +173,7 @@ export function AppRoutes() {
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="devices" element={<AdminDevicesPage />} />
           <Route path="locations" element={<AdminLocationsPage />} />
+          <Route path="*" element={<Navigate to="/admin" replace />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />

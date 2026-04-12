@@ -13,6 +13,7 @@ import {
   type SignInStep,
   type CheckInSnapshot,
 } from '../services/checkInService'
+import { apiClient } from '../services/api'
 
 const checkInService = createCheckInService({
   schoolLat: DEFAULT_SCHOOL_LAT,
@@ -131,11 +132,24 @@ export function useCheckInFlow() {
       setDeviceApprovalMessage('อุปกรณ์ตรงกับที่ลงทะเบียนไว้ ใช้งานได้')
       setSignInStep('submitting')
       setCameraMessage('ตรวจสอบอุปกรณ์ผ่านแล้ว กำลังส่งลงชื่อเข้าใช้งาน...')
-      setTimeout(() => {
+      setTimeout(async () => {
         setCameraStatus('active')
         setCheckedIn((current) => current + 1)
         setSignInStep('success')
         setCameraMessage('ลงชื่อสำเร็จ')
+
+        const payload: CheckInSnapshot = checkInService.buildSavePayload({
+          deviceId: currentDevice.id,
+          imei: input,
+          imeiChecked,
+          faceVerified,
+          locationVerified,
+          adminApprovalGranted,
+          gpsMessage,
+          distanceMeters,
+          serviceUnit: registeredDevice?.serviceUnit || serviceUnit,
+        })
+        await apiClient.saveCheckIn(payload)
       }, 800)
       return
     }
@@ -267,20 +281,13 @@ export function useCheckInFlow() {
         distanceMeters,
         serviceUnit: registeredDevice?.serviceUnit || serviceUnit,
       })
-      const response = await fetch('https://script.google.com/macros/s/REPLACE_WITH_YOUR_WEB_APP_URL/exec', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      })
-
-      if (!response.ok) throw new Error('save failed')
+      const response = await apiClient.saveCheckIn(payload)
+      if (!response.saved) throw new Error(response.message)
       setSaveStatus('saved')
-      setCameraMessage('บันทึกข้อมูลลง Google Sheet สำเร็จ')
+      setCameraMessage('บันทึกข้อมูลลงเซิร์ฟเวอร์สำเร็จ')
     } catch {
       setSaveStatus('error')
-      setCameraMessage('บันทึกลง Google Sheet ไม่สำเร็จ')
+      setCameraMessage('บันทึกข้อมูลลงเซิร์ฟเวอร์ไม่สำเร็จ')
     }
   }
 

@@ -48,14 +48,19 @@ export type AdminCrudDeleteResult = {
 }
 
 const defaultFetchImpl = globalThis.fetch.bind(globalThis)
-const defaultBaseUrl = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL : ''
+const defaultBaseUrl =
+  typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL : ''
 
 function joinUrl(baseUrl: string | undefined, path: string) {
   if (!baseUrl) return path
   return `${baseUrl.replace(/\/$/, '')}/${path.replace(/^\//, '')}`
 }
 
-async function requestJson<T>(url: string, init: ApiRequestInit = {}, fetchImpl: typeof fetch = defaultFetchImpl): Promise<ApiResponse<T>> {
+async function requestJson<T>(
+  url: string,
+  init: ApiRequestInit = {},
+  fetchImpl: typeof fetch = defaultFetchImpl,
+): Promise<ApiResponse<T>> {
   const response = await fetchImpl(url, {
     headers: {
       'Content-Type': 'application/json',

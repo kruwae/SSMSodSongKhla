@@ -96,7 +96,8 @@ export default function AdminCrudShell<T extends Record<string, string | number 
   const saveItem = async () => {
     const nextItem = fields.reduce<Record<string, string | number | boolean>>((acc, field) => {
       const value = draft[field.name]
-      acc[field.name] = field.type === 'number' ? Number(value || 0) : field.type === 'checkbox' ? Boolean(value) : String(value || '')
+      acc[field.name] =
+        field.type === 'number' ? Number(value || 0) : field.type === 'checkbox' ? Boolean(value) : String(value || '')
       return acc
     }, {}) as T
 

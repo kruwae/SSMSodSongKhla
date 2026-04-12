@@ -1,9 +1,12 @@
+import { apiClient, type ApiAuthSession } from './api'
+
 export type AuthRole = 'user' | 'admin'
 
 export type AuthUser = {
   id: string
   name: string
   role: AuthRole
+  token?: string
 }
 
 export type AuthSession = {
@@ -26,6 +29,17 @@ const fallbackUsers: Record<AuthRole, AuthUser> = {
   },
 }
 
+function normalizeSession(session: ApiAuthSession | null): AuthUser | null {
+  if (!session || (session.role !== 'user' && session.role !== 'admin')) return null
+
+  return {
+    id: session.userId,
+    name: session.displayName,
+    role: session.role,
+    token: session.token,
+  }
+}
+
 function readStoredUser(): AuthUser | null {
   if (typeof window === 'undefined') return null
 
@@ -42,6 +56,7 @@ function readStoredUser(): AuthUser | null {
       id: parsed.id,
       name: typeof parsed.name === 'string' ? parsed.name : fallbackUsers[parsed.role].name,
       role: parsed.role,
+      token: typeof parsed.token === 'string' ? parsed.token : undefined,
     }
   } catch {
     return null
@@ -83,8 +98,8 @@ export function isAuthenticated() {
   return sessionUser !== null
 }
 
-export function login(role: AuthRole, name?: string) {
-  const user = {
+export async function login(role: AuthRole, name?: string) {
+  const user = normalizeSession(await apiClient.login(role, name ? { username: name } : undefined)) ?? {
     ...fallbackUsers[role],
     name: name?.trim() || fallbackUsers[role].name,
   }
@@ -95,9 +110,22 @@ export function login(role: AuthRole, name?: string) {
   return user
 }
 
-export function logout() {
+export async function refreshAuthSession() {
+  const session = normalizeSession(await apiClient.getSession())
+  if (session) {
+    sessionUser = session
+    persistUser(session)
+    return getAuthSession()
+  }
+
+  return getAuthSession()
+}
+
+export async function logout() {
   sessionUser = null
   persistUser(null)
+
+  await apiClient.logout()
 }
 
 export function restoreAuthSession() {

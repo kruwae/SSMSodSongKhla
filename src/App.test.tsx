@@ -4,7 +4,7 @@ import { ProtectedRoute } from './App'
 
 describe('ProtectedRoute', () => {
   it('redirects admin users away from non-admin paths', () => {
-    const element = ProtectedRoute({ role: 'admin' })
+    const element = ProtectedRoute({ role: 'admin' } as never)
     expect(element.type).toBe(Navigate)
     expect(element.props.to).toBe('/admin')
   })
