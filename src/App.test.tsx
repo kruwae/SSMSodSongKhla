@@ -1,11 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { Navigate } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { render, screen } from '@testing-library/react'
 import { ProtectedRoute } from './App'
 
 describe('ProtectedRoute', () => {
   it('redirects admin users away from non-admin paths', () => {
-    const element = ProtectedRoute({ role: 'admin' } as never)
-    expect(element.type).toBe(Navigate)
-    expect(element.props.to).toBe('/admin')
+    render(
+      <MemoryRouter initialEntries={['/user']}>
+        <Routes>
+          <Route element={<ProtectedRoute role="admin" />}>
+            <Route path="/user" element={<div>Protected content</div>} />
+          </Route>
+          <Route path="/admin" element={<div>Admin page</div>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('Admin page')).toBeInTheDocument()
   })
 })

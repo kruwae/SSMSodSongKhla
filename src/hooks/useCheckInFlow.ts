@@ -27,6 +27,7 @@ export function useCheckInFlow() {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const locationWatchRef = useRef<number | null>(null)
+  const signInTimerRef = useRef<number | null>(null)
 
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>('idle')
   const [cameraMessage, setCameraMessage] = useState('กดปุ่มเพื่อเริ่มสแกนใบหน้า')
@@ -49,11 +50,12 @@ export function useCheckInFlow() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
 
   useEffect(() => {
-    const locationWatchId = locationWatchRef.current
-
     return () => {
-      if (locationWatchId !== null && navigator.geolocation?.clearWatch) {
-        navigator.geolocation.clearWatch(locationWatchId)
+      if (locationWatchRef.current !== null && navigator.geolocation?.clearWatch) {
+        navigator.geolocation.clearWatch(locationWatchRef.current)
+      }
+      if (signInTimerRef.current !== null) {
+        window.clearTimeout(signInTimerRef.current)
       }
       streamRef.current?.getTracks().forEach((track) => track.stop())
     }
@@ -70,6 +72,10 @@ export function useCheckInFlow() {
   }
 
   const resetFlow = () => {
+    if (signInTimerRef.current !== null) {
+      window.clearTimeout(signInTimerRef.current)
+      signInTimerRef.current = null
+    }
     setSignInStep('idle')
     setFaceVerified(false)
     setLocationVerified(false)
@@ -78,6 +84,8 @@ export function useCheckInFlow() {
     setGpsMessage('ยังไม่ได้ตรวจจับตำแหน่ง')
     setDistanceMeters(null)
     setCurrentCoords(null)
+    setImeiChecked(false)
+    setSaveStatus('idle')
     setCameraMessage('กดปุ่มเพื่อเริ่มสแกนใบหน้า')
     stopCamera()
   }
@@ -118,36 +126,33 @@ export function useCheckInFlow() {
       return
     }
 
-    const currentDevice = registeredDevice ?? null
-    if (!currentDevice) {
-      setDeviceVerified(false)
-      setDeviceApprovalMessage('ยังไม่พบอุปกรณ์ที่ลงทะเบียน')
-      setCameraMessage('กรุณาลงทะเบียนอุปกรณ์ก่อน')
-      return
-    }
-
-    if (input === currentDevice.imei) {
+    if (input === registeredDevice.imei) {
       setDeviceVerified(true)
       setDeviceChangePending(false)
       setDeviceApprovalMessage('อุปกรณ์ตรงกับที่ลงทะเบียนไว้ ใช้งานได้')
       setSignInStep('submitting')
       setCameraMessage('ตรวจสอบอุปกรณ์ผ่านแล้ว กำลังส่งลงชื่อเข้าใช้งาน...')
-      setTimeout(async () => {
+
+      if (signInTimerRef.current !== null) {
+        window.clearTimeout(signInTimerRef.current)
+      }
+
+      signInTimerRef.current = window.setTimeout(async () => {
         setCameraStatus('active')
         setCheckedIn((current) => current + 1)
         setSignInStep('success')
         setCameraMessage('ลงชื่อสำเร็จ')
 
         const payload: CheckInSnapshot = checkInService.buildSavePayload({
-          deviceId: currentDevice.id,
+          deviceId: registeredDevice.id,
           imei: input,
-          imeiChecked,
+          imeiChecked: true,
           faceVerified,
           locationVerified,
           adminApprovalGranted,
           gpsMessage,
           distanceMeters,
-          serviceUnit: registeredDevice?.serviceUnit || serviceUnit,
+          serviceUnit: registeredDevice.serviceUnit || serviceUnit,
         })
         await apiClient.saveCheckIn(payload)
       }, 800)
@@ -156,7 +161,7 @@ export function useCheckInFlow() {
 
     setDeviceVerified(false)
     setDeviceChangePending(true)
-    setDeviceApprovalMessage(checkInService.buildDeviceMismatchMessage(currentDevice))
+    setDeviceApprovalMessage(checkInService.buildDeviceMismatchMessage(registeredDevice))
     setSignInStep('error')
     setCameraMessage('อุปกรณ์ไม่ตรงกับที่ลงทะเบียนไว้ รอแอดมินยืนยัน')
   }

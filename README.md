@@ -2,6 +2,15 @@
 
 Vite + React + TypeScript attendance dashboard deployed on Vercel.
 
+## Available scripts
+
+- `npm run dev` — start the Vite dev server
+- `npm run build` — type-check and build the app for production
+- `npm run lint` — run ESLint across the project
+- `npm run test` — run Vitest once
+- `npm run test:watch` — run Vitest in watch mode
+- `npm run preview` — preview the production build locally
+
 ## Google Sheets integration
 
 This project saves check-in records through a Vercel Serverless Function at:
@@ -77,3 +86,9 @@ npm run dev
 
 ```bash
 npm run build
+```
+
+### Test
+
+```bash
+npm run test

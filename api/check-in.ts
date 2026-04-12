@@ -168,7 +168,9 @@ export default async function handler(request: Request) {
   try {
     const payload = await request.json()
     const validated = validatePayload(payload)
-    if (!validated.ok) return json(400, { ok: false, error: validated.error })
+    if (!validated.ok) {
+      return json(400, { ok: false, error: validated.error })
+    }
 
     await appendToSheet(validated.data)
     return json(200, { ok: true })

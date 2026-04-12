@@ -4,9 +4,29 @@ export type AdminDashboardPageProps = {
   today: string
 }
 
+type GoogleSheetTestStep = {
+  name: string
+  label: string
+  ok: boolean
+  message: string
+}
+
+type GoogleSheetTestResponse = {
+  ok: boolean
+  message?: string
+  spreadsheetTitle?: string
+  sheetName?: string
+  sheetExists?: boolean
+  sheetCount?: number
+  error?: string
+  rawError?: string
+  stack?: string
+  steps?: GoogleSheetTestStep[]
+}
+
 function AdminDashboardPage({ today }: AdminDashboardPageProps) {
   const [testingConnection, setTestingConnection] = useState(false)
-  const [testResult, setTestResult] = useState<string>('ยังไม่ได้ทดสอบการเชื่อมต่อ')
+  const [testResult, setTestResult] = useState('ยังไม่ได้ทดสอบการเชื่อมต่อ')
   const [testOk, setTestOk] = useState<boolean | null>(null)
 
   const classifyGoogleSheetError = (message: string) => {
@@ -31,6 +51,9 @@ function AdminDashboardPage({ today }: AdminDashboardPageProps) {
     return `สาเหตุไม่ชัดเจน: ${message}`
   }
 
+  const renderStepSummary = (steps: GoogleSheetTestStep[]) =>
+    steps.map((step, index) => `${index + 1}. ${step.label}: ${step.ok ? 'ผ่าน' : 'ไม่ผ่าน'} - ${step.message}`).join(' | ')
+
   const handleTestConnection = async () => {
     setTestingConnection(true)
     setTestResult('กำลังทดสอบการเชื่อมต่อ Google Sheets...')
@@ -44,31 +67,10 @@ function AdminDashboardPage({ today }: AdminDashboardPageProps) {
         },
       })
 
-      const data = (await response.json()) as {
-        ok: boolean
-        message?: string
-        spreadsheetTitle?: string
-        sheetName?: string
-        sheetExists?: boolean
-        sheetCount?: number
-        error?: string
-        rawError?: string
-        stack?: string
-        steps?: Array<{
-          name: string
-          label: string
-          ok: boolean
-          message: string
-        }>
-      }
-
-      const renderStepSummary = (steps: NonNullable<typeof data.steps>) =>
-        steps
-          .map((step, index) => `${index + 1}. ${step.label}: ${step.ok ? 'ผ่าน' : 'ไม่ผ่าน'} - ${step.message}`)
-          .join(' | ')
+      const data = (await response.json()) as GoogleSheetTestResponse
 
       if (!response.ok || !data.ok) {
-        const errorMessage = data.error || `HTTP ${response.status}`
+        const errorMessage = data.error || data.message || `HTTP ${response.status}`
         const classifiedError = classifyGoogleSheetError(errorMessage)
         setTestOk(false)
         setTestResult(
@@ -79,7 +81,7 @@ function AdminDashboardPage({ today }: AdminDashboardPageProps) {
 
       setTestOk(true)
       setTestResult(
-        `เชื่อมต่อสำเร็จ: ${data.spreadsheetTitle} | tab: ${data.sheetName} | พบแท็บ: ${data.sheetExists ? 'ใช่' : 'ไม่พบ'} | จำนวนแท็บ: ${data.sheetCount ?? 0}${data.steps?.length ? ` | รายละเอียด: ${renderStepSummary(data.steps)}` : ''}`,
+        `เชื่อมต่อสำเร็จ: ${data.spreadsheetTitle || '-'} | tab: ${data.sheetName || '-'} | พบแท็บ: ${data.sheetExists ? 'ใช่' : 'ไม่พบ'} | จำนวนแท็บ: ${data.sheetCount ?? 0}${data.steps?.length ? ` | รายละเอียด: ${renderStepSummary(data.steps)}` : ''}`,
       )
     } catch {
       setTestOk(false)

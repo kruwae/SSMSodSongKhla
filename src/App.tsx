@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import RoleNav from './components/RoleNav'
 import AdminDashboardPage from './pages/admin/AdminDashboardPage'
@@ -55,8 +55,8 @@ function LoginPage() {
 }
 
 function RouteShell({ role }: { role: AppRole }) {
-  const navigate = useNavigate()
   const location = useLocation()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const isAdmin = role === 'admin'
   const today = useMemo(() => {
     return new Date().toLocaleDateString('th-TH', {
@@ -68,9 +68,9 @@ function RouteShell({ role }: { role: AppRole }) {
   }, [])
 
   return (
-    <div className="index-page">
-      <div className="sidebar-overlay" onClick={() => void 0} aria-hidden="true" />
-      <aside className="sidebar open">
+    <div className={`index-page${sidebarOpen ? ' sidebar-open' : ''}`}>
+      <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
+      <aside className={`sidebar${sidebarOpen ? ' open' : ''}`}>
         <div className="sidebar-header">
           <div className="brand-mark">SSM</div>
           <div>
@@ -94,8 +94,14 @@ function RouteShell({ role }: { role: AppRole }) {
 
       <main className="main-content">
         <header className="topbar">
-          <button type="button" className="menu-button" aria-label="กลับหน้า login" onClick={() => navigate('/login')}>
-            ⟵
+          <button
+            type="button"
+            className="menu-button"
+            aria-label={sidebarOpen ? 'ปิดเมนู' : 'เปิดเมนู'}
+            aria-expanded={sidebarOpen}
+            onClick={() => setSidebarOpen((open) => !open)}
+          >
+            ☰
           </button>
           <div>
             <p className="eyebrow">{isAdmin ? 'Admin Routing' : 'User Routing'}</p>
