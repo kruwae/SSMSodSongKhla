@@ -35,6 +35,7 @@ export type CheckInServiceDeps = {
   schoolLng: number
   maxDistanceMeters: number
   minAccuracyMeters: number
+  getTargetLocation?: () => { lat: number; lng: number } | null
   storedDeviceSeed: {
     imei: string
     name: string
@@ -92,7 +93,11 @@ export function createCheckInService(deps: CheckInServiceDeps) {
       const lat = position.coords.latitude
       const lng = position.coords.longitude
       const accuracy = position.coords.accuracy
-      const meters = haversineMeters(lat, lng, deps.schoolLat, deps.schoolLng)
+      const targetLocation = deps.getTargetLocation?.() ?? {
+        lat: deps.schoolLat,
+        lng: deps.schoolLng,
+      }
+      const meters = haversineMeters(lat, lng, targetLocation.lat, targetLocation.lng)
       const precision: GpsPrecision = accuracy <= 10 ? '12-digit' : '6-digit'
 
       if (accuracy > deps.minAccuracyMeters) {

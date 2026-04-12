@@ -22,13 +22,9 @@ const serviceUnitLocationMap: Record<string, { lat: number; lng: number }> = {
   'Work From Home': { lat: 6.647581014685428, lng: 101.30647939321433 },
 }
 
-const checkInService = createCheckInService({
-  schoolLat: DEFAULT_SCHOOL_LAT,
-  schoolLng: DEFAULT_SCHOOL_LNG,
-  maxDistanceMeters: DEFAULT_MAX_DISTANCE_METERS,
-  minAccuracyMeters: DEFAULT_MIN_ACCURACY_METERS,
-  storedDeviceSeed: DEFAULT_STORED_DEVICE_SEED,
-})
+const getSelectedServiceUnitLocation = (serviceUnit: string) =>
+  serviceUnitLocationMap[serviceUnit] ?? null
+
 
 type CheckInState = {
   cameraStatus: CameraStatus
@@ -266,6 +262,19 @@ export function useCheckInFlow() {
   const signInTimerRef = useRef<number | null>(null)
 
   const [state, dispatch] = useReducer(reducer, initialState)
+
+  const checkInService = useMemo(
+    () =>
+      createCheckInService({
+        schoolLat: DEFAULT_SCHOOL_LAT,
+        schoolLng: DEFAULT_SCHOOL_LNG,
+        maxDistanceMeters: DEFAULT_MAX_DISTANCE_METERS,
+        minAccuracyMeters: DEFAULT_MIN_ACCURACY_METERS,
+        getTargetLocation: () => getSelectedServiceUnitLocation(state.serviceUnit),
+        storedDeviceSeed: DEFAULT_STORED_DEVICE_SEED,
+      }),
+    [state.serviceUnit],
+  )
 
   useEffect(() => {
     return () => {
