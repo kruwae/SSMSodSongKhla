@@ -52,20 +52,34 @@ function AdminDashboardPage({ today }: AdminDashboardPageProps) {
         sheetExists?: boolean
         sheetCount?: number
         error?: string
+        rawError?: string
         stack?: string
+        steps?: Array<{
+          name: string
+          label: string
+          ok: boolean
+          message: string
+        }>
       }
+
+      const renderStepSummary = (steps: NonNullable<typeof data.steps>) =>
+        steps
+          .map((step, index) => `${index + 1}. ${step.label}: ${step.ok ? 'ผ่าน' : 'ไม่ผ่าน'} - ${step.message}`)
+          .join(' | ')
 
       if (!response.ok || !data.ok) {
         const errorMessage = data.error || `HTTP ${response.status}`
         const classifiedError = classifyGoogleSheetError(errorMessage)
         setTestOk(false)
-        setTestResult(`ไม่สามารถเชื่อมต่อ Google Sheets ได้: ${classifiedError}`)
+        setTestResult(
+          `ไม่สามารถเชื่อมต่อ Google Sheets ได้: ${classifiedError}${data.steps?.length ? ` | รายละเอียด: ${renderStepSummary(data.steps)}` : ''}`,
+        )
         return
       }
 
       setTestOk(true)
       setTestResult(
-        `เชื่อมต่อสำเร็จ: ${data.spreadsheetTitle} | tab: ${data.sheetName} | พบแท็บ: ${data.sheetExists ? 'ใช่' : 'ไม่พบ'} | จำนวนแท็บ: ${data.sheetCount ?? 0}`,
+        `เชื่อมต่อสำเร็จ: ${data.spreadsheetTitle} | tab: ${data.sheetName} | พบแท็บ: ${data.sheetExists ? 'ใช่' : 'ไม่พบ'} | จำนวนแท็บ: ${data.sheetCount ?? 0}${data.steps?.length ? ` | รายละเอียด: ${renderStepSummary(data.steps)}` : ''}`,
       )
     } catch {
       setTestOk(false)
