@@ -168,7 +168,7 @@ export default async function handler(request: Request) {
   try {
     const payload = await request.json()
     const validated = validatePayload(payload)
-    if (!validated.ok) {
+    if (validated.ok === false) {
       return json(400, { ok: false, error: validated.error })
     }
 
