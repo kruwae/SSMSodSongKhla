@@ -77,11 +77,22 @@ async function requestJson<T>(
     }
   }
 
+  const contentType = response.headers.get('content-type') ?? ''
+  const responseBody = contentType.includes('application/json') ? await response.json() : await response.text()
+
   if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`)
+    const errorMessage =
+      typeof responseBody === 'object' && responseBody !== null && 'error' in responseBody
+        ? String((responseBody as { error: unknown }).error)
+        : typeof responseBody === 'object' && responseBody !== null && 'message' in responseBody
+          ? String((responseBody as { message: unknown }).message)
+          : typeof responseBody === 'string' && responseBody
+            ? responseBody
+            : `Request failed with status ${response.status}`
+    throw new Error(errorMessage)
   }
 
-  const data = (await response.json()) as T
+  const data = responseBody as T
   return {
     ok: true,
     status: response.status,
@@ -157,10 +168,10 @@ export function createApiClient(config: ApiClientConfig = {}) {
           fetchImpl,
         )
         return response.data
-      } catch {
+      } catch (error) {
         return {
           saved: false,
-          message: 'backend unavailable',
+          message: error instanceof Error ? error.message : 'backend unavailable',
           snapshot,
         }
       }
