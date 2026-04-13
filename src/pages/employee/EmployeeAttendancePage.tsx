@@ -3,32 +3,99 @@ import SectionCard from '../../components/SectionCard'
 import StatusBadge from '../../components/StatusBadge'
 
 const rows = [
-  { date: '2026-04-12', status: 'present', hours: '8.8' },
-  { date: '2026-04-11', status: 'late', hours: '8.1' },
+  { date: '2026-04-12', status: 'present', hours: '8.8', checkIn: '08:12', checkOut: '17:08' },
+  { date: '2026-04-11', status: 'late', hours: '8.1', checkIn: '08:46', checkOut: '17:05' },
 ]
+
+const statusLabels: Record<string, { label: string; variant: 'success' | 'warning' | 'neutral' }> = {
+  present: { label: 'Present', variant: 'success' },
+  late: { label: 'Late', variant: 'warning' },
+  absent: { label: 'Absent', variant: 'neutral' },
+}
 
 export default function EmployeeAttendancePage(): JSX.Element {
   return (
-    <SectionCard title="My attendance" description="View your attendance history and work hours.">
-      <div className="space-y-3">
-        {rows.map((row) => (
-          <div key={row.date} className="flex items-center justify-between rounded-2xl border border-slate-200 p-4">
-            <div>
-              <h3 className="font-medium text-slate-900">{row.date}</h3>
-              <p className="text-sm text-slate-500">{row.hours} hours</p>
-            </div>
-            <StatusBadge
-              status={row.status === 'present' ? 'success' : row.status === 'late' ? 'warning' : 'neutral'}
-              label={row.status}
-            />
+    <div className="space-y-5">
+      <SectionCard
+        title="My attendance"
+        description="Track your attendance history, hours worked, and daily check-in activity."
+        className="overflow-hidden"
+      >
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">This month</p>
+            <p className="mt-2 text-2xl font-semibold tracking-tight text-white">22 days</p>
+            <p className="mt-1 text-sm text-slate-400">Completed on schedule</p>
           </div>
-        ))}
-      </div>
-      {rows.length === 0 ? (
-        <div className="mt-4">
-          <EmptyState title="No attendance data" description="Your attendance history will be shown here." />
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Average hours</p>
+            <p className="mt-2 text-2xl font-semibold tracking-tight text-white">8.4h</p>
+            <p className="mt-1 text-sm text-slate-400">Per working day</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Latest status</p>
+            <p className="mt-2 text-2xl font-semibold tracking-tight text-white">On time</p>
+            <p className="mt-1 text-sm text-slate-400">Checked in before 08:15</p>
+          </div>
         </div>
-      ) : null}
-    </SectionCard>
+      </SectionCard>
+
+      <SectionCard
+        title="Recent records"
+        description="Review your latest attendance entries and total hours."
+        actions={
+          <div className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-amber-200">
+            Updated today
+          </div>
+        }
+      >
+        {rows.length > 0 ? (
+          <div className="space-y-3">
+            {rows.map((row) => {
+              const badge = statusLabels[row.status] ?? statusLabels.absent
+
+              return (
+                <article
+                  key={row.date}
+                  className="rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:border-amber-400/30 hover:bg-white/[0.07]"
+                >
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-base font-semibold tracking-tight text-white">{row.date}</h3>
+                        <StatusBadge label={badge.label} variant={badge.variant} />
+                      </div>
+                      <p className="mt-1 text-sm text-slate-400">
+                        Check-in {row.checkIn} · Check-out {row.checkOut}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 sm:min-w-[16rem]">
+                      <div className="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+                        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">
+                          Hours
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-slate-100">{row.hours}h</p>
+                      </div>
+                      <div className="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+                        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">
+                          Status
+                        </p>
+                        <p className="mt-1 text-sm font-semibold capitalize text-slate-100">{row.status}</p>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        ) : (
+          <EmptyState
+            title="No attendance data"
+            description="Your attendance history will appear here once check-ins are recorded."
+          />
+        )}
+      </SectionCard>
+    </div>
   )
 }

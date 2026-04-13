@@ -59,32 +59,33 @@ const upcomingTasks = [
 export default function AdminDashboardPage(): JSX.Element {
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 p-6 shadow-sm">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <section className="overflow-hidden rounded-[28px] border border-amber-300/20 bg-gradient-to-br from-[#17182f] via-[#11172b] to-[#0b1020] p-6 shadow-[0_24px_80px_rgba(3,7,18,0.55)] sm:p-7">
+        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top_right,_rgba(96,165,250,0.22),_transparent_34%),radial-gradient(circle_at_bottom_left,_rgba(168,85,247,0.18),_transparent_36%)]" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl space-y-3">
-            <div className="inline-flex items-center rounded-full border border-sky-100 bg-sky-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">
+            <div className="inline-flex items-center rounded-full border border-amber-300/25 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-200 shadow-[0_0_0_1px_rgba(251,191,36,0.06)]">
               Admin overview
             </div>
             <div className="space-y-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">Attendance dashboard</h1>
-              <p className="max-w-xl text-sm leading-6 text-slate-600 md:text-base">
-                Track check-ins, approvals, and device health from one clean workspace built for daily attendance operations.
+              <h1 className="text-2xl font-semibold tracking-tight text-white md:text-4xl">Attendance dashboard</h1>
+              <p className="max-w-xl text-sm leading-6 text-slate-300 md:text-base">
+                Track check-ins, approvals, and device health from one polished workspace built for daily attendance operations.
               </p>
             </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Shifts live</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">4</p>
+            <div className="rounded-2xl border border-white/10 bg-white/7 px-4 py-3 shadow-[0_14px_30px_rgba(2,6,23,0.28)] backdrop-blur">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Shifts live</p>
+              <p className="mt-1 text-2xl font-semibold text-white">4</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Approval queue</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">7</p>
+            <div className="rounded-2xl border border-amber-300/20 bg-white/7 px-4 py-3 shadow-[0_14px_30px_rgba(2,6,23,0.28)] backdrop-blur">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Approval queue</p>
+              <p className="mt-1 text-2xl font-semibold text-white">7</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Device health</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">94%</p>
+            <div className="rounded-2xl border border-sky-400/20 bg-white/7 px-4 py-3 shadow-[0_14px_30px_rgba(2,6,23,0.28)] backdrop-blur">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Device health</p>
+              <p className="mt-1 text-2xl font-semibold text-white">94%</p>
             </div>
           </div>
         </div>
@@ -94,18 +95,18 @@ export default function AdminDashboardPage(): JSX.Element {
         {metrics.map((metric) => (
           <SectionCard
             key={metric.label}
-            className="h-full border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+            className="h-full border border-white/10 bg-[#10172a]/90 shadow-[0_18px_40px_rgba(3,7,18,0.35)] backdrop-blur"
             title={metric.label}
           >
             <div className="space-y-3">
               <div className="flex items-end justify-between gap-4">
-                <p className="text-3xl font-semibold tracking-tight text-slate-900">{metric.value}</p>
+                <p className="text-3xl font-semibold tracking-tight text-white">{metric.value}</p>
                 <StatusBadge
-                  status={metric.trend.includes('Needs') || metric.trend.includes('pending') ? 'warning' : 'success'}
+                  variant={metric.trend.includes('Needs') || metric.trend.includes('pending') ? 'warning' : 'success'}
                   label={metric.trend}
                 />
               </div>
-              <p className="text-sm text-slate-500">{metric.note}</p>
+              <p className="text-sm text-slate-400">{metric.note}</p>
             </div>
           </SectionCard>
         ))}
@@ -115,70 +116,70 @@ export default function AdminDashboardPage(): JSX.Element {
         <SectionCard
           title="Operational summary"
           description="A quick snapshot of attendance momentum, pending work, and device status."
-          className="border-slate-200 bg-white shadow-sm"
+          className="border border-white/10 bg-[#10172a]/90 shadow-[0_18px_40px_rgba(3,7,18,0.35)] backdrop-blur"
         >
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm font-medium text-slate-600">Attendance pace</p>
+            <div className="rounded-2xl border border-sky-400/15 bg-gradient-to-br from-[#121a31] to-[#0f1528] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+              <p className="text-sm font-medium text-slate-300">Attendance pace</p>
               <div className="mt-3 flex items-end justify-between gap-4">
                 <div>
-                  <p className="text-2xl font-semibold text-slate-900">86%</p>
-                  <p className="mt-1 text-sm text-slate-500">of expected check-ins completed</p>
+                  <p className="text-2xl font-semibold text-white">86%</p>
+                  <p className="mt-1 text-sm text-slate-400">of expected check-ins completed</p>
                 </div>
-                <StatusBadge status="success" label="+12% from last week" />
+                <StatusBadge variant="success" label="+12% from last week" />
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm font-medium text-slate-600">Risk indicators</p>
+            <div className="rounded-2xl border border-amber-300/15 bg-gradient-to-br from-[#141a32] to-[#0f1528] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+              <p className="text-sm font-medium text-slate-300">Risk indicators</p>
               <div className="mt-3 flex items-end justify-between gap-4">
                 <div>
-                  <p className="text-2xl font-semibold text-slate-900">3</p>
-                  <p className="mt-1 text-sm text-slate-500">late patterns flagged today</p>
+                  <p className="text-2xl font-semibold text-white">3</p>
+                  <p className="mt-1 text-sm text-slate-400">late patterns flagged today</p>
                 </div>
-                <StatusBadge status="warning" label="Review needed" />
+                <StatusBadge variant="warning" label="Review needed" />
               </div>
             </div>
           </div>
 
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 p-4">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
               <div className="flex items-center justify-between gap-4">
-                <h3 className="text-sm font-semibold text-slate-900">Recent activity</h3>
-                <span className="text-xs font-medium text-slate-500">Live feed</span>
+                <h3 className="text-sm font-semibold text-white">Recent activity</h3>
+                <span className="text-xs font-medium text-slate-400">Live feed</span>
               </div>
 
               <ul className="mt-4 space-y-4">
                 {recentActivity.map((item) => (
-                  <li key={item.title} className="flex gap-3">
+                  <li key={item.title} className="flex gap-3 rounded-xl border border-white/5 bg-[#0c1223]/70 px-3 py-3">
                     <span
                       className={`mt-1 inline-flex h-2.5 w-2.5 flex-none rounded-full ${
-                        item.status === 'success' ? 'bg-emerald-500' : 'bg-amber-500'
+                        item.status === 'success' ? 'bg-emerald-400 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]' : 'bg-amber-400 shadow-[0_0_0_4px_rgba(245,158,11,0.12)]'
                       }`}
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-medium text-slate-900">{item.title}</p>
-                        <StatusBadge status={item.status} label={item.time} />
+                        <p className="text-sm font-medium text-white">{item.title}</p>
+                        <StatusBadge variant={item.status} label={item.time} />
                       </div>
-                      <p className="mt-1 text-sm leading-6 text-slate-600">{item.detail}</p>
+                      <p className="mt-1 text-sm leading-6 text-slate-400">{item.detail}</p>
                     </div>
                   </li>
                 ))}
               </ul>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 p-4">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
               <div className="flex items-center justify-between gap-4">
-                <h3 className="text-sm font-semibold text-slate-900">Priority tasks</h3>
-                <span className="text-xs font-medium text-slate-500">Today</span>
+                <h3 className="text-sm font-semibold text-white">Priority tasks</h3>
+                <span className="text-xs font-medium text-slate-400">Today</span>
               </div>
 
               <ul className="mt-4 space-y-3">
                 {upcomingTasks.map((task) => (
-                  <li key={task} className="flex items-start gap-3 rounded-xl bg-slate-50 px-3 py-3">
-                    <span className="mt-1 inline-flex h-2 w-2 flex-none rounded-full bg-sky-500" />
-                    <p className="text-sm leading-6 text-slate-700">{task}</p>
+                  <li key={task} className="flex items-start gap-3 rounded-xl border border-white/5 bg-[#0c1223]/70 px-3 py-3">
+                    <span className="mt-1 inline-flex h-2 w-2 flex-none rounded-full bg-sky-400 shadow-[0_0_0_4px_rgba(56,189,248,0.12)]" />
+                    <p className="text-sm leading-6 text-slate-300">{task}</p>
                   </li>
                 ))}
               </ul>
@@ -189,26 +190,26 @@ export default function AdminDashboardPage(): JSX.Element {
         <SectionCard
           title="Operational queue"
           description="What needs your attention right now."
-          className="border-slate-200 bg-white shadow-sm"
+          className="border border-white/10 bg-[#10172a]/90 shadow-[0_18px_40px_rgba(3,7,18,0.35)] backdrop-blur"
         >
           <div className="space-y-4">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="rounded-2xl border border-amber-300/15 bg-gradient-to-br from-[#141a32] to-[#0f1528] p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium text-slate-900">Pending approvals</p>
-                  <p className="mt-1 text-sm text-slate-600">Leave requests and attendance exceptions.</p>
+                  <p className="text-sm font-medium text-white">Pending approvals</p>
+                  <p className="mt-1 text-sm text-slate-400">Leave requests and attendance exceptions.</p>
                 </div>
-                <StatusBadge status="warning" label="7 open" />
+                <StatusBadge variant="warning" label="7 open" />
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="rounded-2xl border border-sky-400/15 bg-gradient-to-br from-[#141a32] to-[#0f1528] p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium text-slate-900">Device alerts</p>
-                  <p className="mt-1 text-sm text-slate-600">Monitor kiosks and biometric sync health.</p>
+                  <p className="text-sm font-medium text-white">Device alerts</p>
+                  <p className="mt-1 text-sm text-slate-400">Monitor kiosks and biometric sync health.</p>
                 </div>
-                <StatusBadge status="success" label="2 resolved" />
+                <StatusBadge variant="success" label="2 resolved" />
               </div>
             </div>
 

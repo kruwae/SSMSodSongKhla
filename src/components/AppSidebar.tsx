@@ -12,9 +12,16 @@ export function AppSidebar({ title, items, footer }: Props) {
   return (
     <aside className="app-sidebar">
       <div className="app-sidebar__brand">
-        <p className="app-sidebar__eyebrow">attendance platform</p>
-        <h1 className="app-sidebar__title">{title}</h1>
-        <p className="app-sidebar__description">A focused workspace for attendance, leaves, and team operations.</p>
+        <div className="app-sidebar__brand-mark" aria-hidden="true">
+          <span className="app-sidebar__brand-orb" />
+        </div>
+        <div className="app-sidebar__brand-copy">
+          <p className="app-sidebar__eyebrow">attendance platform</p>
+          <h1 className="app-sidebar__title">{title}</h1>
+          <p className="app-sidebar__description">
+            A refined control center for attendance, leaves, and team operations.
+          </p>
+        </div>
       </div>
 
       <nav className="app-sidebar__nav" aria-label={`${title} navigation`}>

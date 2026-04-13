@@ -16,9 +16,16 @@ const adminNavItems: NavigationItem[] = [
 export default function AdminLayout() {
   return (
     <div className="app-shell">
-      <AppSidebar title="Admin Console" items={adminNavItems} footer="Manage offices, employees, and records" />
+      <AppSidebar
+        title="Admin Console"
+        items={adminNavItems}
+        footer="Manage offices, employees, and records from the premium control center."
+      />
       <div className="app-shell__content">
-        <AppHeader title="Admin Portal" subtitle="Operations, approval workflows, and attendance oversight" />
+        <AppHeader
+          title="Admin Portal"
+          subtitle="Operations, approval workflows, and attendance oversight in one streamlined view."
+        />
         <main className="app-main">
           <Outlet />
         </main>
