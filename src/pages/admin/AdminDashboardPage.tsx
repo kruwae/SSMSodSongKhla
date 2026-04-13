@@ -5,72 +5,95 @@ import StatusBadge from '../../components/StatusBadge'
 import { getAdminDashboardSummary } from '../../services/supabaseData'
 import { queryKeys } from '../../store/queryKeys'
 
-const fallbackMetrics = [
+type DashboardMetric = {
+  label: string
+  value: string
+  trend: string
+  note: string
+}
+
+const fallbackMetrics: DashboardMetric[] = [
   {
-    label: 'Today check-ins',
+    label: 'ลงชื่อวันนี้',
     value: '—',
-    trend: 'Live data unavailable',
-    note: 'Waiting for attendance records',
+    trend: 'รอข้อมูล',
+    note: 'ข้อมูลจาก Supabase',
   },
   {
-    label: 'On time',
+    label: 'บุคลากรทั้งหมด',
     value: '—',
-    trend: 'Live data unavailable',
-    note: 'Waiting for attendance records',
+    trend: 'รอข้อมูล',
+    note: 'รวมผู้ดูแลและบุคลากร',
   },
   {
-    label: 'Leave requests',
+    label: 'คำขอลา',
     value: '—',
-    trend: 'Live data unavailable',
-    note: 'Waiting for leave requests',
+    trend: 'รอข้อมูล',
+    note: 'สถานะรออนุมัติ',
   },
   {
-    label: 'Active devices',
+    label: 'อุปกรณ์ที่ยืนยันแล้ว',
     value: '—',
-    trend: 'Live data unavailable',
-    note: 'Waiting for device records',
+    trend: 'รอข้อมูล',
+    note: 'อุปกรณ์พร้อมใช้งาน',
   },
 ]
 
-export default function AdminDashboardPage(): JSX.Element {
+export default function AdminDashboardPage() {
   const dashboardQuery = useQuery({
-    queryKey: queryKeys.admin.dashboard(),
+    queryKey: queryKeys.admin.dashboard,
     queryFn: getAdminDashboardSummary,
   })
 
-  const summary = dashboardQuery.data
+  const summary = dashboardQuery.data?.data
+  const stats = summary?.stats
 
-  const metrics = summary
+  const lateCount = summary?.attendance.filter((item) => item.lateStatus).length ?? 0
+  const approvalQueueCount = summary?.leaves.filter((item) => item.status === 'pending').length ?? 0
+  const onlineDeviceCount = summary?.devices.filter((item) => item.isVerified).length ?? 0
+
+  const metrics: DashboardMetric[] = stats
     ? [
         {
-          label: 'Today check-ins',
-          value: String(summary.todayCheckIns),
-          trend: summary.todayCheckInsChange,
-          note: 'vs yesterday',
+          label: 'ลงชื่อวันนี้',
+          value: String(stats.attendanceToday),
+          trend: stats.attendanceToday > 0 ? 'เชื่อมต่อสด' : 'รอข้อมูล',
+          note: 'ข้อมูลจาก Supabase',
         },
         {
-          label: 'On time',
-          value: String(summary.onTimeCount),
-          trend: summary.onTimeChange,
-          note: summary.attendanceNote,
+          label: 'บุคลากรทั้งหมด',
+          value: String(stats.employees),
+          trend: 'พร้อมใช้งาน',
+          note: 'รวมผู้ดูแลและบุคลากร',
         },
         {
-          label: 'Leave requests',
-          value: String(summary.pendingLeaveRequests),
-          trend: summary.leaveTrend,
-          note: summary.leaveNote,
+          label: 'คำขอลา',
+          value: String(stats.pendingLeaves),
+          trend: stats.pendingLeaves > 0 ? 'รอตรวจสอบ' : 'ปกติ',
+          note: 'สถานะรออนุมัติ',
         },
         {
-          label: 'Active devices',
-          value: String(summary.activeDevices),
-          trend: summary.deviceTrend,
-          note: summary.deviceNote,
+          label: 'อุปกรณ์ที่ยืนยันแล้ว',
+          value: String(stats.activeDevices),
+          trend: stats.activeDevices > 0 ? 'ออนไลน์' : 'ยังไม่มี',
+          note: 'อุปกรณ์พร้อมใช้งาน',
         },
       ]
     : fallbackMetrics
 
-  const recentActivity = summary?.recentActivity ?? []
-  const upcomingTasks = summary?.upcomingTasks ?? []
+  const recentActivity =
+    summary?.attendance.slice(0, 4).map((item) => ({
+      title: item.employeeName ?? 'ไม่ระบุชื่อ',
+      detail: `เช็กอิน ${new Date(item.checkInAt).toLocaleString('th-TH')}${item.officeName ? ` • ${item.officeName}` : ''}`,
+      time: item.lateStatus ? 'มาสาย' : 'ตรงเวลา',
+      status: item.lateStatus ? ('warning' as const) : ('success' as const),
+    })) ?? []
+
+  const upcomingTasks =
+    summary?.leaves.slice(0, 4).map((item) => {
+      const employeeName = item.employeeName ?? 'ไม่ระบุชื่อ'
+      return `${employeeName} • ${item.type} • ${item.status}`
+    }) ?? []
 
   return (
     <div className="space-y-6">
@@ -79,42 +102,42 @@ export default function AdminDashboardPage(): JSX.Element {
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl space-y-3">
             <div className="inline-flex items-center rounded-full border border-amber-300/25 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-200 shadow-[0_0_0_1px_rgba(251,191,36,0.06)]">
-              Admin overview
+              ภาพรวมผู้ดูแลระบบ
             </div>
             <div className="space-y-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-white md:text-4xl">Attendance dashboard</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-white md:text-4xl">แดชบอร์ดการลงเวลาปฏิบัติงาน</h1>
               <p className="max-w-xl text-sm leading-6 text-slate-300 md:text-base">
-                Track check-ins, approvals, and device health from one polished workspace built for daily attendance operations.
+                ติดตามการเช็กชื่อ การอนุมัติคำขอ และสถานะอุปกรณ์จากศูนย์กลางข้อมูลเดียวสำหรับการปฏิบัติงานประจำวัน
               </p>
             </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-white/10 bg-white/7 px-4 py-3 shadow-[0_14px_30px_rgba(2,6,23,0.28)] backdrop-blur">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Shifts live</p>
-              <p className="mt-1 text-2xl font-semibold text-white">{summary?.shiftsLive ?? '—'}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">รายการลงเวลาล่าสุด</p>
+              <p className="mt-1 text-2xl font-semibold text-white">{summary?.attendance.length ?? '—'}</p>
             </div>
             <div className="rounded-2xl border border-amber-300/20 bg-white/7 px-4 py-3 shadow-[0_14px_30px_rgba(2,6,23,0.28)] backdrop-blur">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Approval queue</p>
-              <p className="mt-1 text-2xl font-semibold text-white">{summary?.approvalQueue ?? '—'}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">รายการรออนุมัติ</p>
+              <p className="mt-1 text-2xl font-semibold text-white">{approvalQueueCount}</p>
             </div>
             <div className="rounded-2xl border border-sky-400/20 bg-white/7 px-4 py-3 shadow-[0_14px_30px_rgba(2,6,23,0.28)] backdrop-blur">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Device health</p>
-              <p className="mt-1 text-2xl font-semibold text-white">{summary?.deviceHealth ?? '—'}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">อุปกรณ์ที่ออนไลน์</p>
+              <p className="mt-1 text-2xl font-semibold text-white">{onlineDeviceCount}</p>
             </div>
           </div>
         </div>
       </section>
 
       {dashboardQuery.isLoading ? (
-        <SectionCard title="Loading dashboard data" description="Fetching live attendance metrics from Supabase.">
-          <EmptyState title="Loading dashboard" description="Please wait while the latest admin overview loads." />
+        <SectionCard title="กำลังโหลดข้อมูลแดชบอร์ด" description="กำลังดึงข้อมูลการลงเวลาจาก Supabase">
+          <EmptyState title="กำลังโหลดแดชบอร์ด" description="กรุณารอสักครู่ ระบบกำลังโหลดข้อมูลล่าสุด" />
         </SectionCard>
       ) : null}
 
       {dashboardQuery.isError ? (
-        <SectionCard title="Dashboard unavailable" description="There was a problem loading live metrics from Supabase.">
-          <EmptyState title="Unable to load dashboard" description="Please try again later or check your Supabase connection." />
+        <SectionCard title="ไม่สามารถโหลดแดชบอร์ดได้" description="เกิดปัญหาในการดึงข้อมูลจาก Supabase">
+          <EmptyState title="โหลดข้อมูลไม่สำเร็จ" description="กรุณาตรวจสอบการเชื่อมต่อ Supabase แล้วลองใหม่อีกครั้ง" />
         </SectionCard>
       ) : null}
 
@@ -129,7 +152,7 @@ export default function AdminDashboardPage(): JSX.Element {
               <div className="flex items-end justify-between gap-4">
                 <p className="text-3xl font-semibold tracking-tight text-white">{metric.value}</p>
                 <StatusBadge
-                  variant={metric.trend.toLowerCase().includes('needs') || metric.trend.toLowerCase().includes('pending') ? 'warning' : 'success'}
+                  variant={metric.trend.includes('รอ') ? 'warning' : 'success'}
                   label={metric.trend}
                 />
               </div>
@@ -141,30 +164,30 @@ export default function AdminDashboardPage(): JSX.Element {
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)]">
         <SectionCard
-          title="Operational summary"
-          description="A quick snapshot of attendance momentum, pending work, and device status."
+          title="สรุปการปฏิบัติงาน"
+          description="ภาพรวมการลงเวลา งานที่รอดำเนินการ และสถานะอุปกรณ์"
           className="border border-white/10 bg-[#10172a]/90 shadow-[0_18px_40px_rgba(3,7,18,0.35)] backdrop-blur"
         >
           <div className="grid gap-4 md:grid-cols-2">
             <div className="rounded-2xl border border-sky-400/15 bg-gradient-to-br from-[#121a31] to-[#0f1528] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-              <p className="text-sm font-medium text-slate-300">Attendance pace</p>
+              <p className="text-sm font-medium text-slate-300">ความคืบหน้าการลงเวลา</p>
               <div className="mt-3 flex items-end justify-between gap-4">
                 <div>
-                  <p className="text-2xl font-semibold text-white">{summary?.attendancePace ?? '—'}</p>
-                  <p className="mt-1 text-sm text-slate-400">{summary?.attendancePaceNote ?? 'of expected check-ins completed'}</p>
+                  <p className="text-2xl font-semibold text-white">{stats?.attendanceToday ?? '—'}</p>
+                  <p className="mt-1 text-sm text-slate-400">จำนวนรายการลงเวลาวันนี้</p>
                 </div>
-                <StatusBadge variant="success" label={summary?.attendancePaceTrend ?? 'Live'} />
+                <StatusBadge variant="success" label="สด" />
               </div>
             </div>
 
             <div className="rounded-2xl border border-amber-300/15 bg-gradient-to-br from-[#141a32] to-[#0f1528] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-              <p className="text-sm font-medium text-slate-300">Risk indicators</p>
+              <p className="text-sm font-medium text-slate-300">ตัวชี้วัดความเสี่ยง</p>
               <div className="mt-3 flex items-end justify-between gap-4">
                 <div>
-                  <p className="text-2xl font-semibold text-white">{summary?.riskCount ?? '—'}</p>
-                  <p className="mt-1 text-sm text-slate-400">{summary?.riskNote ?? 'late patterns flagged today'}</p>
+                  <p className="text-2xl font-semibold text-white">{lateCount}</p>
+                  <p className="mt-1 text-sm text-slate-400">จำนวนบุคลากรที่มาสายจากข้อมูลล่าสุด</p>
                 </div>
-                <StatusBadge variant="warning" label={summary?.riskTrend ?? 'Review needed'} />
+                <StatusBadge variant="warning" label="ตรวจสอบ" />
               </div>
             </div>
           </div>
@@ -172,14 +195,14 @@ export default function AdminDashboardPage(): JSX.Element {
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
               <div className="flex items-center justify-between gap-4">
-                <h3 className="text-sm font-semibold text-white">Recent activity</h3>
-                <span className="text-xs font-medium text-slate-400">Live feed</span>
+                <h3 className="text-sm font-semibold text-white">กิจกรรมล่าสุด</h3>
+                <span className="text-xs font-medium text-slate-400">ข้อมูลสด</span>
               </div>
 
               <ul className="mt-4 space-y-4">
                 {recentActivity.length > 0 ? (
                   recentActivity.map((item) => (
-                    <li key={item.title} className="flex gap-3 rounded-xl border border-white/5 bg-[#0c1223]/70 px-3 py-3">
+                    <li key={`${item.title}-${item.detail}`} className="flex gap-3 rounded-xl border border-white/5 bg-[#0c1223]/70 px-3 py-3">
                       <span
                         className={`mt-1 inline-flex h-2.5 w-2.5 flex-none rounded-full ${
                           item.status === 'success'
@@ -198,8 +221,8 @@ export default function AdminDashboardPage(): JSX.Element {
                   ))
                 ) : (
                   <EmptyState
-                    title="No recent activity"
-                    description="Activity from attendance, approvals, and devices will appear here when available."
+                    title="ยังไม่มีกิจกรรมล่าสุด"
+                    description="เมื่อมีการเช็กชื่อ อนุมัติคำขอ หรืออัปเดตอุปกรณ์ ระบบจะแสดงที่นี่"
                   />
                 )}
               </ul>
@@ -207,8 +230,8 @@ export default function AdminDashboardPage(): JSX.Element {
 
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
               <div className="flex items-center justify-between gap-4">
-                <h3 className="text-sm font-semibold text-white">Priority tasks</h3>
-                <span className="text-xs font-medium text-slate-400">Today</span>
+                <h3 className="text-sm font-semibold text-white">งานสำคัญวันนี้</h3>
+                <span className="text-xs font-medium text-slate-400">วันนี้</span>
               </div>
 
               <ul className="mt-4 space-y-3">
@@ -221,8 +244,8 @@ export default function AdminDashboardPage(): JSX.Element {
                   ))
                 ) : (
                   <EmptyState
-                    title="No priority tasks"
-                    description="Open approvals, device alerts, and attendance exceptions will be listed here."
+                    title="ยังไม่มีงานสำคัญ"
+                    description="รายการคำขอ การแจ้งเตือน และงานที่ต้องติดตามจะแสดงในส่วนนี้"
                   />
                 )}
               </ul>
@@ -231,34 +254,34 @@ export default function AdminDashboardPage(): JSX.Element {
         </SectionCard>
 
         <SectionCard
-          title="Operational queue"
-          description="What needs your attention right now."
+          title="คิวงานที่ต้องติดตาม"
+          description="สิ่งที่ผู้ดูแลระบบควรตรวจสอบในขณะนี้"
           className="border border-white/10 bg-[#10172a]/90 shadow-[0_18px_40px_rgba(3,7,18,0.35)] backdrop-blur"
         >
           <div className="space-y-4">
             <div className="rounded-2xl border border-amber-300/15 bg-gradient-to-br from-[#141a32] to-[#0f1528] p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium text-white">Pending approvals</p>
-                  <p className="mt-1 text-sm text-slate-400">Leave requests and attendance exceptions.</p>
+                  <p className="text-sm font-medium text-white">คำขอที่รออนุมัติ</p>
+                  <p className="mt-1 text-sm text-slate-400">รวมคำขอลาและรายการที่ต้องตรวจสอบ</p>
                 </div>
-                <StatusBadge variant="warning" label={summary?.approvalQueueLabel ?? '—'} />
+                <StatusBadge variant="warning" label={`${approvalQueueCount} รายการ`} />
               </div>
             </div>
 
             <div className="rounded-2xl border border-sky-400/15 bg-gradient-to-br from-[#141a32] to-[#0f1528] p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium text-white">Device alerts</p>
-                  <p className="mt-1 text-sm text-slate-400">Monitor kiosks and biometric sync health.</p>
+                  <p className="text-sm font-medium text-white">อุปกรณ์ที่พร้อมใช้งาน</p>
+                  <p className="mt-1 text-sm text-slate-400">ติดตามสถานะเครื่องและการซิงก์ข้อมูล</p>
                 </div>
-                <StatusBadge variant="success" label={summary?.deviceAlertsLabel ?? '—'} />
+                <StatusBadge variant="success" label={`${onlineDeviceCount} เครื่อง`} />
               </div>
             </div>
 
             <EmptyState
-              title="Dashboard insights will appear here"
-              description="Connect Supabase queries and analytics charts to surface attendance performance, late arrivals, and leave load."
+              title="ข้อมูลเชิงลึกเพิ่มเติมจะแสดงที่นี่"
+              description="เมื่อมีข้อมูลเพียงพอ ระบบจะแสดงแนวโน้มการมาสาย ภาระงานลา และคุณภาพการใช้งานอุปกรณ์"
             />
           </div>
         </SectionCard>
