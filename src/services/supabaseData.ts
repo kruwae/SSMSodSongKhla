@@ -11,6 +11,11 @@ type QueryItemResult<T> = {
   error: string | null
 }
 
+type OperationResult<T> = {
+  data: T | null
+  error: string | null
+}
+
 type DepartmentRow = {
   id: string
   code: string
@@ -73,6 +78,16 @@ type AttendanceRow = {
   work_hours: number | string | null
   late_status: boolean
   check_in_source: string
+  check_in_latitude?: number | string | null
+  check_in_longitude?: number | string | null
+  check_out_latitude?: number | string | null
+  check_out_longitude?: number | string | null
+  check_in_face_image_url?: string | null
+  check_out_face_image_url?: string | null
+  check_in_face_match_score?: number | string | null
+  check_out_face_match_score?: number | string | null
+  check_in_metadata?: Record<string, unknown> | null
+  check_out_metadata?: Record<string, unknown> | null
   profiles?: { full_name?: string } | null
   offices?: { name?: string } | null
   shifts?: { name?: string } | null
@@ -200,6 +215,62 @@ export type DashboardStats = {
   pendingLeaves: number
   unreadNotifications: number
   activeDevices: number
+}
+
+export type OfficeUpsertInput = {
+  code: string
+  name: string
+  address?: string | null
+  departmentId: string
+  isActive?: boolean
+}
+
+export type EmployeeUpdateInput = {
+  fullName?: string
+  email?: string
+  role?: 'admin' | 'manager' | 'employee'
+  employeeCode?: string | null
+  phone?: string | null
+  avatarUrl?: string | null
+  isActive?: boolean
+  departmentId?: string | null
+  officeId?: string | null
+}
+
+export type DeviceUpdateInput = {
+  profileId?: string | null
+  deviceName?: string | null
+  platform?: string | null
+  isVerified?: boolean
+  lastSeenAt?: string | null
+}
+
+export type NotificationCreateInput = {
+  profileId?: string | null
+  title: string
+  body: string
+  category: 'system' | 'attendance' | 'leave' | 'device' | 'admin'
+  actionUrl?: string | null
+  isRead?: boolean
+  sentAt?: string | null
+}
+
+export type NotificationUpdateInput = Partial<NotificationCreateInput>
+
+export type LeaveReviewInput = {
+  status: 'approved' | 'rejected' | 'cancelled'
+  reviewedNote?: string | null
+}
+
+export type AttendanceCheckPayload = {
+  officeId?: string | null
+  shiftId?: string | null
+  source?: string
+  latitude?: number | null
+  longitude?: number | null
+  faceImageUrl?: string | null
+  faceMatchScore?: number | null
+  metadata?: Record<string, unknown> | null
 }
 
 function normalizeError(error: unknown): string {
@@ -671,4 +742,256 @@ export async function getEmployeeProfile(profileId?: string | null): Promise<Que
     data: employee,
     error: employees.error,
   }
+}
+
+export async function createOffice(input: OfficeUpsertInput): Promise<OperationResult<OfficeSummary>> {
+  const { data, error } = await supabase
+    .from('offices')
+    .insert({
+      code: input.code,
+      name: input.name,
+      address: input.address ?? null,
+      department_id: input.departmentId,
+      is_active: input.isActive ?? true,
+    })
+    .select('id, code, name, address, department_id, is_active, departments(name)')
+    .single()
+
+  if (error) {
+    return { data: null, error: normalizeError(error) }
+  }
+
+  return { data: mapOffice(data as OfficeRow), error: null }
+}
+
+export async function updateOffice(id: string, input: Partial<OfficeUpsertInput>): Promise<OperationResult<OfficeSummary>> {
+  const payload: Record<string, unknown> = {}
+  if (input.code !== undefined) payload.code = input.code
+  if (input.name !== undefined) payload.name = input.name
+  if (input.address !== undefined) payload.address = input.address
+  if (input.departmentId !== undefined) payload.department_id = input.departmentId
+  if (input.isActive !== undefined) payload.is_active = input.isActive
+
+  const { data, error } = await supabase
+    .from('offices')
+    .update(payload)
+    .eq('id', id)
+    .select('id, code, name, address, department_id, is_active, departments(name)')
+    .single()
+
+  if (error) {
+    return { data: null, error: normalizeError(error) }
+  }
+
+  return { data: mapOffice(data as OfficeRow), error: null }
+}
+
+export async function deleteOffice(id: string): Promise<OperationResult<null>> {
+  const { error } = await supabase.from('offices').delete().eq('id', id)
+
+  if (error) {
+    return { data: null, error: normalizeError(error) }
+  }
+
+  return { data: null, error: null }
+}
+
+export async function updateEmployee(id: string, input: EmployeeUpdateInput): Promise<OperationResult<EmployeeSummary>> {
+  const payload: Record<string, unknown> = {}
+  if (input.fullName !== undefined) payload.full_name = input.fullName
+  if (input.email !== undefined) payload.email = input.email
+  if (input.role !== undefined) payload.role = input.role
+  if (input.employeeCode !== undefined) payload.employee_code = input.employeeCode
+  if (input.phone !== undefined) payload.phone = input.phone
+  if (input.avatarUrl !== undefined) payload.avatar_url = input.avatarUrl
+  if (input.isActive !== undefined) payload.is_active = input.isActive
+  if (input.departmentId !== undefined) payload.department_id = input.departmentId
+  if (input.officeId !== undefined) payload.office_id = input.officeId
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(payload)
+    .eq('id', id)
+    .select('id, email, full_name, role, employee_code, phone, avatar_url, is_active, department_id, office_id, departments(name), offices(name)')
+    .single()
+
+  if (error) {
+    return { data: null, error: normalizeError(error) }
+  }
+
+  return { data: mapEmployee(data as ProfileRow), error: null }
+}
+
+export async function deleteEmployee(id: string): Promise<OperationResult<null>> {
+  const { error } = await supabase.from('profiles').delete().eq('id', id)
+
+  if (error) {
+    return { data: null, error: normalizeError(error) }
+  }
+
+  return { data: null, error: null }
+}
+
+export async function updateDevice(id: string, input: DeviceUpdateInput): Promise<OperationResult<DeviceSummary>> {
+  const payload: Record<string, unknown> = {}
+  if (input.profileId !== undefined) payload.profile_id = input.profileId
+  if (input.deviceName !== undefined) payload.device_name = input.deviceName
+  if (input.platform !== undefined) payload.platform = input.platform
+  if (input.isVerified !== undefined) payload.is_verified = input.isVerified
+  if (input.lastSeenAt !== undefined) payload.last_seen_at = input.lastSeenAt
+
+  const { data, error } = await supabase
+    .from('devices')
+    .update(payload)
+    .eq('id', id)
+    .select('id, profile_id, device_name, platform, is_verified, last_seen_at, profiles(full_name)')
+    .single()
+
+  if (error) {
+    return { data: null, error: normalizeError(error) }
+  }
+
+  return { data: mapDevice(data as DeviceRow), error: null }
+}
+
+export async function deleteDevice(id: string): Promise<OperationResult<null>> {
+  const { error } = await supabase.from('devices').delete().eq('id', id)
+
+  if (error) {
+    return { data: null, error: normalizeError(error) }
+  }
+
+  return { data: null, error: null }
+}
+
+export async function createNotification(input: NotificationCreateInput): Promise<OperationResult<NotificationSummary>> {
+  const { data, error } = await supabase
+    .from('notifications')
+    .insert({
+      profile_id: input.profileId ?? null,
+      title: input.title,
+      body: input.body,
+      category: input.category,
+      action_url: input.actionUrl ?? null,
+      is_read: input.isRead ?? false,
+      sent_at: input.sentAt ?? new Date().toISOString(),
+    })
+    .select('id, profile_id, title, body, category, action_url, is_read, sent_at')
+    .single()
+
+  if (error) {
+    return { data: null, error: normalizeError(error) }
+  }
+
+  return { data: mapNotification(data as NotificationRow), error: null }
+}
+
+export async function updateNotification(id: string, input: NotificationUpdateInput): Promise<OperationResult<NotificationSummary>> {
+  const payload: Record<string, unknown> = {}
+  if (input.profileId !== undefined) payload.profile_id = input.profileId
+  if (input.title !== undefined) payload.title = input.title
+  if (input.body !== undefined) payload.body = input.body
+  if (input.category !== undefined) payload.category = input.category
+  if (input.actionUrl !== undefined) payload.action_url = input.actionUrl
+  if (input.isRead !== undefined) payload.is_read = input.isRead
+  if (input.sentAt !== undefined) payload.sent_at = input.sentAt
+
+  const { data, error } = await supabase
+    .from('notifications')
+    .update(payload)
+    .eq('id', id)
+    .select('id, profile_id, title, body, category, action_url, is_read, sent_at')
+    .single()
+
+  if (error) {
+    return { data: null, error: normalizeError(error) }
+  }
+
+  return { data: mapNotification(data as NotificationRow), error: null }
+}
+
+export async function deleteNotification(id: string): Promise<OperationResult<null>> {
+  const { error } = await supabase.from('notifications').delete().eq('id', id)
+
+  if (error) {
+    return { data: null, error: normalizeError(error) }
+  }
+
+  return { data: null, error: null }
+}
+
+export async function reviewLeaveRequest(id: string, input: LeaveReviewInput): Promise<OperationResult<LeaveRequestSummary>> {
+  const { data, error } = await supabase
+    .from('leave_requests')
+    .update({
+      status: input.status,
+      reviewed_at: new Date().toISOString(),
+      reviewed_note: input.reviewedNote ?? null,
+    })
+    .eq('id', id)
+    .select('id, profile_id, type, reason, start_date, end_date, status, reviewed_at, reviewed_note, profiles!leave_requests_profile_id_fkey(full_name), approver:profiles!leave_requests_approver_id_fkey(full_name)')
+    .single()
+
+  if (error) {
+    return { data: null, error: normalizeError(error) }
+  }
+
+  return { data: mapLeaveRequest(data as LeaveRequestRow), error: null }
+}
+
+export async function checkInAttendance(input: AttendanceCheckPayload): Promise<OperationResult<AttendanceSummary>> {
+  const { data: sessionProfile, error: sessionError } = await getCurrentSessionProfile()
+  if (sessionError || !sessionProfile?.userId) {
+    return { data: null, error: sessionError ?? 'Unable to resolve current user session.' }
+  }
+
+  const payload: Record<string, unknown> = {
+    profile_id: sessionProfile.userId,
+    check_in_at: new Date().toISOString(),
+    check_in_source: input.source ?? 'face_gps',
+    check_in_latitude: input.latitude ?? null,
+    check_in_longitude: input.longitude ?? null,
+    check_in_face_image_url: input.faceImageUrl ?? null,
+    check_in_face_match_score: input.faceMatchScore ?? null,
+    check_in_metadata: input.metadata ?? null,
+  }
+
+  if (input.officeId !== undefined) payload.office_id = input.officeId
+  if (input.shiftId !== undefined) payload.shift_id = input.shiftId
+
+  const { data, error } = await supabase
+    .from('attendance_records')
+    .insert(payload)
+    .select('id, profile_id, check_in_at, check_out_at, work_hours, late_status, check_in_source, profiles(full_name), offices(name), shifts(name)')
+    .single()
+
+  if (error) {
+    return { data: null, error: normalizeError(error) }
+  }
+
+  return { data: mapAttendance(data as AttendanceRow), error: null }
+}
+
+export async function checkOutAttendance(attendanceId: string, input: AttendanceCheckPayload): Promise<OperationResult<AttendanceSummary>> {
+  const payload: Record<string, unknown> = {
+    check_out_at: new Date().toISOString(),
+    check_out_latitude: input.latitude ?? null,
+    check_out_longitude: input.longitude ?? null,
+    check_out_face_image_url: input.faceImageUrl ?? null,
+    check_out_face_match_score: input.faceMatchScore ?? null,
+    check_out_metadata: input.metadata ?? null,
+  }
+
+  const { data, error } = await supabase
+    .from('attendance_records')
+    .update(payload)
+    .eq('id', attendanceId)
+    .select('id, profile_id, check_in_at, check_out_at, work_hours, late_status, check_in_source, profiles(full_name), offices(name), shifts(name)')
+    .single()
+
+  if (error) {
+    return { data: null, error: normalizeError(error) }
+  }
+
+  return { data: mapAttendance(data as AttendanceRow), error: null }
 }
