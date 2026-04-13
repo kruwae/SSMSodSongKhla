@@ -8,34 +8,34 @@ import { queryKeys } from '../../store/queryKeys'
 type DashboardMetric = {
   label: string
   value: string
-  trend: string
-  note: string
+  hint: string
+  tone: 'success' | 'warning' | 'neutral'
 }
 
 const fallbackMetrics: DashboardMetric[] = [
   {
     label: 'ลงชื่อวันนี้',
     value: '—',
-    trend: 'รอข้อมูล',
-    note: 'ข้อมูลจาก Supabase',
+    hint: 'ข้อมูลจาก Supabase',
+    tone: 'neutral',
   },
   {
     label: 'บุคลากรทั้งหมด',
     value: '—',
-    trend: 'รอข้อมูล',
-    note: 'รวมผู้ดูแลและบุคลากร',
+    hint: 'รวมผู้ดูแลและบุคลากร',
+    tone: 'neutral',
   },
   {
     label: 'คำขอลา',
     value: '—',
-    trend: 'รอข้อมูล',
-    note: 'สถานะรออนุมัติ',
+    hint: 'สถานะรออนุมัติ',
+    tone: 'neutral',
   },
   {
     label: 'อุปกรณ์ที่ยืนยันแล้ว',
     value: '—',
-    trend: 'รอข้อมูล',
-    note: 'อุปกรณ์พร้อมใช้งาน',
+    hint: 'อุปกรณ์พร้อมใช้งาน',
+    tone: 'neutral',
   },
 ]
 
@@ -57,26 +57,26 @@ export default function AdminDashboardPage() {
         {
           label: 'ลงชื่อวันนี้',
           value: String(stats.attendanceToday),
-          trend: stats.attendanceToday > 0 ? 'เชื่อมต่อสด' : 'รอข้อมูล',
-          note: 'ข้อมูลจาก Supabase',
+          hint: stats.attendanceToday > 0 ? 'เชื่อมต่อสดจากระบบ' : 'รอข้อมูล',
+          tone: stats.attendanceToday > 0 ? 'success' : 'neutral',
         },
         {
           label: 'บุคลากรทั้งหมด',
           value: String(stats.employees),
-          trend: 'พร้อมใช้งาน',
-          note: 'รวมผู้ดูแลและบุคลากร',
+          hint: 'รวมผู้ดูแลและบุคลากร',
+          tone: 'neutral',
         },
         {
           label: 'คำขอลา',
           value: String(stats.pendingLeaves),
-          trend: stats.pendingLeaves > 0 ? 'รอตรวจสอบ' : 'ปกติ',
-          note: 'สถานะรออนุมัติ',
+          hint: stats.pendingLeaves > 0 ? 'รอตรวจสอบ' : 'ปกติ',
+          tone: stats.pendingLeaves > 0 ? 'warning' : 'success',
         },
         {
           label: 'อุปกรณ์ที่ยืนยันแล้ว',
           value: String(stats.activeDevices),
-          trend: stats.activeDevices > 0 ? 'ออนไลน์' : 'ยังไม่มี',
-          note: 'อุปกรณ์พร้อมใช้งาน',
+          hint: stats.activeDevices > 0 ? 'ออนไลน์' : 'ยังไม่มี',
+          tone: stats.activeDevices > 0 ? 'success' : 'neutral',
         },
       ]
     : fallbackMetrics
@@ -99,16 +99,14 @@ export default function AdminDashboardPage() {
     <div className="space-y-6">
       <section className="overflow-hidden rounded-[28px] border border-amber-300/20 bg-gradient-to-br from-[#17182f] via-[#11172b] to-[#0b1020] p-6 shadow-[0_24px_80px_rgba(3,7,18,0.55)] sm:p-7">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(96,165,250,0.22),_transparent_34%),radial-gradient(circle_at_bottom_left,_rgba(168,85,247,0.18),_transparent_36%)]" />
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-2xl space-y-3">
-            <div className="inline-flex items-center rounded-full border border-amber-300/25 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-200 shadow-[0_0_0_1px_rgba(251,191,36,0.06)]">
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl space-y-2">
+            <div className="inline-flex items-center rounded-full border border-amber-300/25 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-200 shadow-[0_0_0_1px_rgba(251,191,36,0.06)]">
               ภาพรวมผู้ดูแล
             </div>
-            <div className="space-y-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-white md:text-4xl">แดชบอร์ดการลงเวลา</h1>
-              <p className="max-w-xl text-sm leading-6 text-slate-300 md:text-base">
-                ติดตามการเช็กชื่อ คำขอ และอุปกรณ์จากศูนย์กลางเดียว
-              </p>
+            <div className="space-y-1.5">
+              <h1 className="text-2xl font-semibold tracking-tight text-white md:text-4xl">แดชบอร์ด</h1>
+              <p className="max-w-xl text-sm leading-6 text-slate-300 md:text-base">สรุปการลงเวลา คำขอ และอุปกรณ์จากศูนย์กลางเดียว</p>
             </div>
           </div>
 
@@ -130,13 +128,13 @@ export default function AdminDashboardPage() {
       </section>
 
       {dashboardQuery.isLoading ? (
-        <SectionCard title="กำลังโหลดแดชบอร์ด" description="กำลังดึงข้อมูลล่าสุดจาก Supabase">
+        <SectionCard title="กำลังโหลด" description="กำลังดึงข้อมูลล่าสุดจาก Supabase">
           <EmptyState title="กำลังโหลดข้อมูล" description="กรุณารอสักครู่" />
         </SectionCard>
       ) : null}
 
       {dashboardQuery.isError ? (
-        <SectionCard title="โหลดแดชบอร์ดไม่สำเร็จ" description="เกิดปัญหาในการดึงข้อมูลจาก Supabase">
+        <SectionCard title="โหลดไม่สำเร็จ" description="เกิดปัญหาในการดึงข้อมูลจาก Supabase">
           <EmptyState title="โหลดข้อมูลไม่สำเร็จ" description="กรุณาตรวจสอบการเชื่อมต่อ Supabase แล้วลองใหม่อีกครั้ง" />
         </SectionCard>
       ) : null}
@@ -146,14 +144,19 @@ export default function AdminDashboardPage() {
           <SectionCard
             key={metric.label}
             className="h-full border border-white/10 bg-[#10172a]/90 shadow-[0_18px_40px_rgba(3,7,18,0.35)] backdrop-blur"
-            title={metric.label}
           >
-            <div className="space-y-3">
-              <div className="flex items-end justify-between gap-4">
+            <div className="flex h-full flex-col justify-between gap-3">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{metric.label}</p>
                 <p className="text-3xl font-semibold tracking-tight text-white">{metric.value}</p>
-                <StatusBadge variant={metric.trend.includes('รอ') ? 'warning' : 'success'} label={metric.trend} />
               </div>
-              <p className="text-sm text-slate-400">{metric.note}</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm text-slate-400">{metric.hint}</p>
+                <StatusBadge
+                  variant={metric.tone}
+                  label={metric.tone === 'success' ? 'พร้อมใช้งาน' : metric.tone === 'warning' ? 'ตรวจสอบ' : 'รอข้อมูล'}
+                />
+              </div>
             </div>
           </SectionCard>
         ))}

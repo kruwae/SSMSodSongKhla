@@ -36,8 +36,8 @@ export default function AdminDevicesPage() {
       <SectionCard title="ภาพรวมอุปกรณ์" description="สรุปจำนวนอุปกรณ์ สถานะการยืนยัน และความหลากหลายของแพลตฟอร์ม">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {deviceStats.map((stat) => (
-            <div key={stat.label} className="rounded-2xl border border-white/8 bg-white/5 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{stat.label}</p>
+            <div key={stat.label} className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">{stat.label}</p>
               <p className="mt-2 text-2xl font-semibold tracking-tight text-white">{stat.value}</p>
             </div>
           ))}
@@ -46,7 +46,7 @@ export default function AdminDevicesPage() {
 
       <SectionCard
         title="รายการอุปกรณ์"
-        description="แสดงอุปกรณ์ที่ผูกกับผู้ใช้งานในรูปแบบการ์ดแนวนอน อ่านง่าย และตรวจสอบสถานะได้เร็ว"
+        description="แสดงข้อมูลสำคัญแบบการ์ดแนวนอน เพื่อช่วยตรวจสอบสถานะได้เร็วขึ้น"
         actions={
           <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
             <span className="h-2 w-2 rounded-full bg-sky-400" />
@@ -63,26 +63,29 @@ export default function AdminDevicesPage() {
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
             {devices.map((device) => (
-              <div key={device.id} className="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
+              <div key={device.id} className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-semibold tracking-tight text-white">{device.deviceName ?? 'ไม่ระบุชื่ออุปกรณ์'}</p>
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold tracking-tight text-white">{device.deviceName ?? 'ไม่ระบุชื่ออุปกรณ์'}</p>
                     <p className="mt-1 text-sm text-slate-300">{device.profileName ?? 'ยังไม่ผูกกับผู้ใช้งาน'}</p>
-                    <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">{device.platform ?? 'ไม่ระบุแพลตฟอร์ม'}</p>
                   </div>
                   <StatusBadge variant={device.isVerified ? 'success' : 'warning'} label={device.isVerified ? 'ยืนยันแล้ว' : 'รอยืนยัน'} />
                 </div>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3">
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-500">ผู้ใช้งาน</p>
                     <p className="mt-1 text-sm text-slate-200">{device.profileName ?? 'ยังไม่กำหนด'}</p>
                   </div>
-                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
+                  <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3">
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-500">แพลตฟอร์ม</p>
                     <p className="mt-1 text-sm text-slate-200">{device.platform ?? '—'}</p>
                   </div>
-                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 sm:col-span-2">
+                  <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">สถานะ</p>
+                    <p className="mt-1 text-sm text-slate-200">{device.isVerified ? 'ยืนยันเรียบร้อย' : 'รอการยืนยัน'}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3 sm:col-span-3">
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-500">ใช้งานล่าสุด</p>
                     <p className="mt-1 text-sm text-slate-200">
                       {device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString('th-TH') : 'ยังไม่มีข้อมูล'}

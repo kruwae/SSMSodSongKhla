@@ -42,9 +42,9 @@ export default function AdminAttendancePage() {
       <SectionCard title="ภาพรวมการลงเวลา" description="สรุปจำนวนผู้ลงเวลา ผู้มาสาย ผู้ที่ยังไม่เช็กเอาต์ และชั่วโมงทำงานเฉลี่ย">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {attendanceStats.map((stat) => (
-            <div key={stat.label} className="rounded-2xl border border-white/8 bg-white/5 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{stat.label}</p>
-              <p className="mt-2 text-2xl font-semibold tracking-tight text-white">{stat.value}</p>
+            <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">{stat.label}</p>
+              <p className="mt-2 text-3xl font-semibold tracking-tight text-white">{stat.value}</p>
             </div>
           ))}
         </div>
@@ -67,43 +67,40 @@ export default function AdminAttendancePage() {
         ) : isEmpty ? (
           <EmptyState title="ยังไม่มีข้อมูลการลงเวลา" description="เมื่อบุคลากรเริ่มลงเวลา ข้อมูลจะแสดงในส่วนนี้" />
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-white/10">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-white/10">
-                <thead className="bg-white/[0.03]">
-                  <tr className="text-left text-xs uppercase tracking-[0.2em] text-slate-400">
-                    <th className="py-3.5 pl-4 pr-4 font-semibold">บุคลากร</th>
-                    <th className="py-3.5 pr-4 font-semibold">สำนักงาน</th>
-                    <th className="py-3.5 pr-4 font-semibold">เวลาเข้า</th>
-                    <th className="py-3.5 pr-4 font-semibold">เวลาออก</th>
-                    <th className="py-3.5 pr-4 font-semibold">สถานะ</th>
-                    <th className="py-3.5 pr-4 font-semibold">ชั่วโมง</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/10 bg-slate-950/30">
-                  {records.map((record) => (
-                    <tr key={record.id} className="text-sm transition-colors hover:bg-white/[0.03]">
-                      <td className="py-4 pl-4 pr-4">
-                        <div>
-                          <p className="font-semibold tracking-tight text-white">{record.employeeName ?? 'ไม่ระบุชื่อ'}</p>
-                          <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">{record.shiftName ?? 'ไม่ระบุกะ'}</p>
-                        </div>
-                      </td>
-                      <td className="py-4 pr-4 text-slate-300">{record.officeName ?? '—'}</td>
-                      <td className="py-4 pr-4 text-slate-300">{new Date(record.checkInAt).toLocaleString('th-TH')}</td>
-                      <td className="py-4 pr-4 text-slate-300">{record.checkOutAt ? new Date(record.checkOutAt).toLocaleString('th-TH') : 'ยังไม่เช็กเอาต์'}</td>
-                      <td className="py-4 pr-4">
-                        <StatusBadge
-                          variant={record.lateStatus ? 'warning' : 'success'}
-                          label={record.lateStatus ? 'มาสาย' : 'ตรงเวลา'}
-                        />
-                      </td>
-                      <td className="py-4 pr-4 text-slate-300">{record.workHours ?? '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+            {records.map((record) => (
+              <div key={record.id} className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold tracking-tight text-white">{record.employeeName ?? 'ไม่ระบุชื่อ'}</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">{record.shiftName ?? 'ไม่ระบุกะ'}</p>
+                  </div>
+                  <StatusBadge
+                    variant={record.lateStatus ? 'warning' : 'success'}
+                    label={record.lateStatus ? 'มาสาย' : 'ตรงเวลา'}
+                  />
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">สำนักงาน</p>
+                    <p className="mt-1 text-sm text-slate-200">{record.officeName ?? '—'}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">ชั่วโมง</p>
+                    <p className="mt-1 text-sm text-slate-200">{record.workHours ?? '-'}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">เวลาเข้า</p>
+                    <p className="mt-1 text-sm text-slate-200">{new Date(record.checkInAt).toLocaleString('th-TH')}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">เวลาออก</p>
+                    <p className="mt-1 text-sm text-slate-200">{record.checkOutAt ? new Date(record.checkOutAt).toLocaleString('th-TH') : 'ยังไม่เช็กเอาต์'}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </SectionCard>

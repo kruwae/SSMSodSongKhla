@@ -36,8 +36,8 @@ export default function AdminOfficesPage() {
       <SectionCard title="ภาพรวมสำนักงาน" description="สรุปจำนวนสำนักงาน สถานะการเปิดใช้งาน และการกระจายตามหน่วยงาน">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {officeStats.map((stat) => (
-            <div key={stat.label} className="rounded-2xl border border-white/8 bg-white/5 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{stat.label}</p>
+            <div key={stat.label} className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">{stat.label}</p>
               <p className="mt-2 text-2xl font-semibold tracking-tight text-white">{stat.value}</p>
             </div>
           ))}
@@ -46,7 +46,7 @@ export default function AdminOfficesPage() {
 
       <SectionCard
         title="รายการสำนักงาน"
-        description="แสดงสำนักงานแบบการ์ดเรียงแนวนอน ช่วยให้เห็นข้อมูลสำคัญได้รวดเร็วในหน้าจอเดียว"
+        description="แสดงข้อมูลสำคัญแบบการ์ดแนวนอน เพื่อให้สแกนสถานะได้เร็วขึ้น"
         actions={
           <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
             <span className="h-2 w-2 rounded-full bg-sky-400" />
@@ -63,28 +63,31 @@ export default function AdminOfficesPage() {
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
             {offices.map((office) => (
-              <div key={office.id} className="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
+              <div key={office.id} className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-semibold tracking-tight text-white">{office.name}</p>
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold tracking-tight text-white">{office.name}</p>
                     <p className="mt-1 text-sm text-slate-300">{office.code}</p>
-                    <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">{office.departmentName ?? 'ไม่ระบุหน่วยงาน'}</p>
                   </div>
                   <StatusBadge variant={office.isActive ? 'success' : 'neutral'} label={office.isActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'} />
                 </div>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 sm:col-span-2">
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">ที่อยู่</p>
-                    <p className="mt-1 text-sm text-slate-200">{office.address ?? 'ยังไม่กำหนด'}</p>
-                  </div>
-                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">รหัสสำนักงาน</p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">รหัส</p>
                     <p className="mt-1 text-sm text-slate-200">{office.code}</p>
                   </div>
-                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
+                  <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3">
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-500">หน่วยงาน</p>
                     <p className="mt-1 text-sm text-slate-200">{office.departmentName ?? '—'}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">สถานะ</p>
+                    <p className="mt-1 text-sm text-slate-200">{office.isActive ? 'พร้อมใช้งาน' : 'ปิดใช้งาน'}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3 sm:col-span-3">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">ที่อยู่</p>
+                    <p className="mt-1 text-sm text-slate-200">{office.address ?? 'ยังไม่กำหนด'}</p>
                   </div>
                 </div>
               </div>

@@ -33,12 +33,15 @@ export default function AdminEmployeesPage() {
 
   return (
     <div className="space-y-5">
-      <SectionCard title="ภาพรวมบุคลากร" description="สรุปจำนวนบุคลากร สถานะการใช้งาน และการกระจายตามสำนักงาน">
+      <SectionCard title="ภาพรวมบุคลากร" description="สรุปจำนวนและสถานะบุคลากรแบบย่อ">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {employeeStats.map((stat) => (
-            <div key={stat.label} className="rounded-2xl border border-white/8 bg-white/5 p-4">
+            <div
+              key={stat.label}
+              className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-[0_14px_30px_rgba(2,6,23,0.2)]"
+            >
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{stat.label}</p>
-              <p className="mt-2 text-2xl font-semibold tracking-tight text-white">{stat.value}</p>
+              <p className="mt-2 text-3xl font-semibold tracking-tight text-white">{stat.value}</p>
             </div>
           ))}
         </div>
@@ -46,7 +49,7 @@ export default function AdminEmployeesPage() {
 
       <SectionCard
         title="รายชื่อบุคลากร"
-        description="ดูข้อมูลผู้ใช้งาน บทบาท สำนักงาน และสถานะการใช้งานแบบย่อ"
+        description="ข้อมูลผู้ใช้งาน บทบาท สำนักงาน และสถานะ"
         actions={
           <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
             <span className="h-2 w-2 rounded-full bg-sky-400" />
@@ -72,7 +75,10 @@ export default function AdminEmployeesPage() {
                       {employee.role === 'admin' ? 'ผู้ดูแลระบบ' : 'บุคลากร'}
                     </p>
                   </div>
-                  <StatusBadge variant={employee.isActive ? 'success' : 'neutral'} label={employee.isActive ? 'ใช้งานอยู่' : 'ปิดใช้งาน'} />
+                  <StatusBadge
+                    variant={employee.isActive ? 'success' : 'neutral'}
+                    label={employee.isActive ? 'ใช้งานอยู่' : 'ปิดใช้งาน'}
+                  />
                 </div>
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">

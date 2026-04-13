@@ -44,9 +44,9 @@ export default function AdminNotificationsPage() {
       <SectionCard title="ภาพรวมการแจ้งเตือน" description="สรุปจำนวนการแจ้งเตือน สถานะการอ่าน และหมวดหมู่ที่ใช้งานในระบบ">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {notificationStats.map((stat) => (
-            <div key={stat.label} className="rounded-2xl border border-white/8 bg-white/5 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{stat.label}</p>
-              <p className="mt-2 text-2xl font-semibold tracking-tight text-white">{stat.value}</p>
+            <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">{stat.label}</p>
+              <p className="mt-2 text-3xl font-semibold tracking-tight text-white">{stat.value}</p>
             </div>
           ))}
         </div>
@@ -69,12 +69,12 @@ export default function AdminNotificationsPage() {
         ) : isEmpty ? (
           <EmptyState title="ยังไม่มีการแจ้งเตือน" description="เมื่อระบบมีการแจ้งเตือน ข้อมูลจะปรากฏในส่วนนี้" />
         ) : (
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
             {notifications.map((item) => (
-              <div key={item.id} className="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-semibold tracking-tight text-white">{item.title}</p>
+              <div key={item.id} className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold tracking-tight text-white">{item.title}</p>
                     <p className="mt-1 text-sm text-slate-300">{getCategoryLabel(item.category)}</p>
                     <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">
                       {item.sentAt ? new Date(item.sentAt).toLocaleString('th-TH') : 'ยังไม่ระบุเวลา'}
@@ -83,13 +83,13 @@ export default function AdminNotificationsPage() {
                   <StatusBadge variant={item.isRead ? 'neutral' : 'warning'} label={item.isRead ? 'อ่านแล้ว' : 'ยังไม่อ่าน'} />
                 </div>
 
-                <div className="mt-4 grid gap-3">
-                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">รายละเอียด</p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 sm:col-span-2">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">รายละเอียด</p>
                     <p className="mt-1 text-sm text-slate-200">{item.body}</p>
                   </div>
-                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">ลิงก์ปลายทาง</p>
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 sm:col-span-2">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">ลิงก์ปลายทาง</p>
                     <p className="mt-1 text-sm text-slate-200">{item.actionUrl ?? '—'}</p>
                   </div>
                 </div>
