@@ -205,6 +205,10 @@ canvas {
   padding-inline: 1rem;
 }
 
+.section-shell--employee {
+  width: min(100%, 1320px);
+}
+
 .page-frame {
   min-height: 100vh;
   position: relative;
@@ -232,6 +236,13 @@ canvas {
     linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--background-alt)) 100%);
 }
 
+.app-shell--employee {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.16), transparent 26%),
+    radial-gradient(circle at 18% 18%, rgba(250, 204, 21, 0.08), transparent 18%),
+    linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--background-alt)) 100%);
+}
+
 .app-shell__content {
   min-width: 0;
   display: flex;
@@ -240,10 +251,18 @@ canvas {
   padding: 1.25rem;
 }
 
+.app-shell__content--employee {
+  padding: 1rem;
+}
+
 .app-main {
   flex: 1;
   min-width: 0;
   padding: 0 0 0.5rem;
+}
+
+.app-main--employee {
+  padding-bottom: 1rem;
 }
 
 .app-sidebar {
@@ -475,8 +494,9 @@ canvas {
 }
 
 @media (max-width: 768px) {
-  .app-shell__content {
-    padding: 1rem;
+  .app-shell__content,
+  .app-shell__content--employee {
+    padding: 0.875rem;
     gap: 0.875rem;
   }
 
@@ -499,5 +519,9 @@ canvas {
 
   .app-sidebar__nav {
     padding-inline: 0.75rem;
+  }
+
+  .section-shell {
+    padding-inline: 0;
   }
 }

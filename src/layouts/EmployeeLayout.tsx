@@ -12,19 +12,21 @@ const employeeNavItems: NavigationItem[] = [
 
 export default function EmployeeLayout() {
   return (
-    <div className="app-shell">
+    <div className="app-shell app-shell--employee">
       <AppSidebar
         title="Employee Portal"
         items={employeeNavItems}
         footer="Clock in, manage leave, and update your profile with ease."
       />
-      <div className="app-shell__content">
+      <div className="app-shell__content app-shell__content--employee">
         <AppHeader
           title="Employee Portal"
-          subtitle="Access attendance and leave tools from a polished workspace built for daily use."
+          subtitle="A mobile-style workspace for attendance, leave, and profile tasks."
         />
-        <main className="app-main">
-          <Outlet />
+        <main className="app-main app-main--employee">
+          <div className="section-shell section-shell--employee">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

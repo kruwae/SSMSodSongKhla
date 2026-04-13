@@ -13,7 +13,7 @@ export function SectionCard({ title, description, actions, children, className }
   return (
     <section
       className={cn(
-        'surface-panel surface-panel--interactive overflow-hidden border border-white/8 p-5 shadow-[0_16px_40px_rgba(6,8,20,0.24)] sm:p-6',
+        'section-card surface-panel surface-panel--interactive overflow-hidden border border-white/8 p-4 shadow-[0_16px_40px_rgba(6,8,20,0.24)] sm:p-5 lg:p-6',
         className,
       )}
     >
@@ -22,7 +22,7 @@ export function SectionCard({ title, description, actions, children, className }
           <div className="min-w-0">
             {title ? (
               <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--ring))] shadow-[0_0_0_4px_rgba(250,204,21,0.12)]" />
+                <span className="section-card__accent h-2.5 w-2.5 rounded-full bg-[hsl(var(--ring))] shadow-[0_0_0_4px_rgba(250,204,21,0.12)]" />
                 <h2 className="text-lg font-semibold tracking-tight text-[hsl(var(--foreground))]">{title}</h2>
               </div>
             ) : null}
@@ -30,10 +30,10 @@ export function SectionCard({ title, description, actions, children, className }
               <p className="mt-1.5 max-w-3xl text-sm leading-6 text-[hsl(var(--muted-foreground))]">{description}</p>
             ) : null}
           </div>
-          {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+          {actions ? <div className="section-card__actions flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
         </div>
       )}
-      {children}
+      <div className="section-card__body">{children}</div>
     </section>
   )
 }
