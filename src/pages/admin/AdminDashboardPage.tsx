@@ -1,62 +1,77 @@
+import { useQuery } from '@tanstack/react-query'
 import EmptyState from '../../components/EmptyState'
 import SectionCard from '../../components/SectionCard'
 import StatusBadge from '../../components/StatusBadge'
+import { getAdminDashboardSummary } from '../../services/supabaseData'
+import { queryKeys } from '../../store/queryKeys'
 
-const metrics = [
+const fallbackMetrics = [
   {
     label: 'Today check-ins',
-    value: '128',
-    trend: '+12%',
-    note: 'vs yesterday',
+    value: '—',
+    trend: 'Live data unavailable',
+    note: 'Waiting for attendance records',
   },
   {
     label: 'On time',
-    value: '104',
-    trend: '+8%',
-    note: 'strong morning flow',
+    value: '—',
+    trend: 'Live data unavailable',
+    note: 'Waiting for attendance records',
   },
   {
     label: 'Leave requests',
-    value: '7',
-    trend: 'Needs review',
-    note: '3 awaiting approval',
+    value: '—',
+    trend: 'Live data unavailable',
+    note: 'Waiting for leave requests',
   },
   {
     label: 'Active devices',
-    value: '18',
-    trend: '2 pending',
-    note: '1 offline kiosk',
+    value: '—',
+    trend: 'Live data unavailable',
+    note: 'Waiting for device records',
   },
-]
-
-const recentActivity = [
-  {
-    title: 'Morning attendance batch completed',
-    detail: '114 employees checked in before 8:30 AM.',
-    time: '5 min ago',
-    status: 'success' as const,
-  },
-  {
-    title: 'Pending leave request from Finance',
-    detail: 'One paid leave request is waiting for manager approval.',
-    time: '18 min ago',
-    status: 'warning' as const,
-  },
-  {
-    title: 'Device sync finished for HQ lobby',
-    detail: 'Attendance kiosk synced successfully with the latest roster.',
-    time: '42 min ago',
-    status: 'success' as const,
-  },
-]
-
-const upcomingTasks = [
-  'Review late arrivals for today’s second shift.',
-  'Approve or reject pending leave requests.',
-  'Check device health for the south entrance kiosk.',
 ]
 
 export default function AdminDashboardPage(): JSX.Element {
+  const dashboardQuery = useQuery({
+    queryKey: queryKeys.admin.dashboard(),
+    queryFn: getAdminDashboardSummary,
+  })
+
+  const summary = dashboardQuery.data
+
+  const metrics = summary
+    ? [
+        {
+          label: 'Today check-ins',
+          value: String(summary.todayCheckIns),
+          trend: summary.todayCheckInsChange,
+          note: 'vs yesterday',
+        },
+        {
+          label: 'On time',
+          value: String(summary.onTimeCount),
+          trend: summary.onTimeChange,
+          note: summary.attendanceNote,
+        },
+        {
+          label: 'Leave requests',
+          value: String(summary.pendingLeaveRequests),
+          trend: summary.leaveTrend,
+          note: summary.leaveNote,
+        },
+        {
+          label: 'Active devices',
+          value: String(summary.activeDevices),
+          trend: summary.deviceTrend,
+          note: summary.deviceNote,
+        },
+      ]
+    : fallbackMetrics
+
+  const recentActivity = summary?.recentActivity ?? []
+  const upcomingTasks = summary?.upcomingTasks ?? []
+
   return (
     <div className="space-y-6">
       <section className="overflow-hidden rounded-[28px] border border-amber-300/20 bg-gradient-to-br from-[#17182f] via-[#11172b] to-[#0b1020] p-6 shadow-[0_24px_80px_rgba(3,7,18,0.55)] sm:p-7">
@@ -77,19 +92,31 @@ export default function AdminDashboardPage(): JSX.Element {
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-white/10 bg-white/7 px-4 py-3 shadow-[0_14px_30px_rgba(2,6,23,0.28)] backdrop-blur">
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Shifts live</p>
-              <p className="mt-1 text-2xl font-semibold text-white">4</p>
+              <p className="mt-1 text-2xl font-semibold text-white">{summary?.shiftsLive ?? '—'}</p>
             </div>
             <div className="rounded-2xl border border-amber-300/20 bg-white/7 px-4 py-3 shadow-[0_14px_30px_rgba(2,6,23,0.28)] backdrop-blur">
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Approval queue</p>
-              <p className="mt-1 text-2xl font-semibold text-white">7</p>
+              <p className="mt-1 text-2xl font-semibold text-white">{summary?.approvalQueue ?? '—'}</p>
             </div>
             <div className="rounded-2xl border border-sky-400/20 bg-white/7 px-4 py-3 shadow-[0_14px_30px_rgba(2,6,23,0.28)] backdrop-blur">
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Device health</p>
-              <p className="mt-1 text-2xl font-semibold text-white">94%</p>
+              <p className="mt-1 text-2xl font-semibold text-white">{summary?.deviceHealth ?? '—'}</p>
             </div>
           </div>
         </div>
       </section>
+
+      {dashboardQuery.isLoading ? (
+        <SectionCard title="Loading dashboard data" description="Fetching live attendance metrics from Supabase.">
+          <EmptyState title="Loading dashboard" description="Please wait while the latest admin overview loads." />
+        </SectionCard>
+      ) : null}
+
+      {dashboardQuery.isError ? (
+        <SectionCard title="Dashboard unavailable" description="There was a problem loading live metrics from Supabase.">
+          <EmptyState title="Unable to load dashboard" description="Please try again later or check your Supabase connection." />
+        </SectionCard>
+      ) : null}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {metrics.map((metric) => (
@@ -102,7 +129,7 @@ export default function AdminDashboardPage(): JSX.Element {
               <div className="flex items-end justify-between gap-4">
                 <p className="text-3xl font-semibold tracking-tight text-white">{metric.value}</p>
                 <StatusBadge
-                  variant={metric.trend.includes('Needs') || metric.trend.includes('pending') ? 'warning' : 'success'}
+                  variant={metric.trend.toLowerCase().includes('needs') || metric.trend.toLowerCase().includes('pending') ? 'warning' : 'success'}
                   label={metric.trend}
                 />
               </div>
@@ -123,10 +150,10 @@ export default function AdminDashboardPage(): JSX.Element {
               <p className="text-sm font-medium text-slate-300">Attendance pace</p>
               <div className="mt-3 flex items-end justify-between gap-4">
                 <div>
-                  <p className="text-2xl font-semibold text-white">86%</p>
-                  <p className="mt-1 text-sm text-slate-400">of expected check-ins completed</p>
+                  <p className="text-2xl font-semibold text-white">{summary?.attendancePace ?? '—'}</p>
+                  <p className="mt-1 text-sm text-slate-400">{summary?.attendancePaceNote ?? 'of expected check-ins completed'}</p>
                 </div>
-                <StatusBadge variant="success" label="+12% from last week" />
+                <StatusBadge variant="success" label={summary?.attendancePaceTrend ?? 'Live'} />
               </div>
             </div>
 
@@ -134,10 +161,10 @@ export default function AdminDashboardPage(): JSX.Element {
               <p className="text-sm font-medium text-slate-300">Risk indicators</p>
               <div className="mt-3 flex items-end justify-between gap-4">
                 <div>
-                  <p className="text-2xl font-semibold text-white">3</p>
-                  <p className="mt-1 text-sm text-slate-400">late patterns flagged today</p>
+                  <p className="text-2xl font-semibold text-white">{summary?.riskCount ?? '—'}</p>
+                  <p className="mt-1 text-sm text-slate-400">{summary?.riskNote ?? 'late patterns flagged today'}</p>
                 </div>
-                <StatusBadge variant="warning" label="Review needed" />
+                <StatusBadge variant="warning" label={summary?.riskTrend ?? 'Review needed'} />
               </div>
             </div>
           </div>
@@ -150,22 +177,31 @@ export default function AdminDashboardPage(): JSX.Element {
               </div>
 
               <ul className="mt-4 space-y-4">
-                {recentActivity.map((item) => (
-                  <li key={item.title} className="flex gap-3 rounded-xl border border-white/5 bg-[#0c1223]/70 px-3 py-3">
-                    <span
-                      className={`mt-1 inline-flex h-2.5 w-2.5 flex-none rounded-full ${
-                        item.status === 'success' ? 'bg-emerald-400 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]' : 'bg-amber-400 shadow-[0_0_0_4px_rgba(245,158,11,0.12)]'
-                      }`}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-medium text-white">{item.title}</p>
-                        <StatusBadge variant={item.status} label={item.time} />
+                {recentActivity.length > 0 ? (
+                  recentActivity.map((item) => (
+                    <li key={item.title} className="flex gap-3 rounded-xl border border-white/5 bg-[#0c1223]/70 px-3 py-3">
+                      <span
+                        className={`mt-1 inline-flex h-2.5 w-2.5 flex-none rounded-full ${
+                          item.status === 'success'
+                            ? 'bg-emerald-400 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]'
+                            : 'bg-amber-400 shadow-[0_0_0_4px_rgba(245,158,11,0.12)]'
+                        }`}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-medium text-white">{item.title}</p>
+                          <StatusBadge variant={item.status} label={item.time} />
+                        </div>
+                        <p className="mt-1 text-sm leading-6 text-slate-400">{item.detail}</p>
                       </div>
-                      <p className="mt-1 text-sm leading-6 text-slate-400">{item.detail}</p>
-                    </div>
-                  </li>
-                ))}
+                    </li>
+                  ))
+                ) : (
+                  <EmptyState
+                    title="No recent activity"
+                    description="Activity from attendance, approvals, and devices will appear here when available."
+                  />
+                )}
               </ul>
             </div>
 
@@ -176,12 +212,19 @@ export default function AdminDashboardPage(): JSX.Element {
               </div>
 
               <ul className="mt-4 space-y-3">
-                {upcomingTasks.map((task) => (
-                  <li key={task} className="flex items-start gap-3 rounded-xl border border-white/5 bg-[#0c1223]/70 px-3 py-3">
-                    <span className="mt-1 inline-flex h-2 w-2 flex-none rounded-full bg-sky-400 shadow-[0_0_0_4px_rgba(56,189,248,0.12)]" />
-                    <p className="text-sm leading-6 text-slate-300">{task}</p>
-                  </li>
-                ))}
+                {upcomingTasks.length > 0 ? (
+                  upcomingTasks.map((task) => (
+                    <li key={task} className="flex items-start gap-3 rounded-xl border border-white/5 bg-[#0c1223]/70 px-3 py-3">
+                      <span className="mt-1 inline-flex h-2 w-2 flex-none rounded-full bg-sky-400 shadow-[0_0_0_4px_rgba(56,189,248,0.12)]" />
+                      <p className="text-sm leading-6 text-slate-300">{task}</p>
+                    </li>
+                  ))
+                ) : (
+                  <EmptyState
+                    title="No priority tasks"
+                    description="Open approvals, device alerts, and attendance exceptions will be listed here."
+                  />
+                )}
               </ul>
             </div>
           </div>
@@ -199,7 +242,7 @@ export default function AdminDashboardPage(): JSX.Element {
                   <p className="text-sm font-medium text-white">Pending approvals</p>
                   <p className="mt-1 text-sm text-slate-400">Leave requests and attendance exceptions.</p>
                 </div>
-                <StatusBadge variant="warning" label="7 open" />
+                <StatusBadge variant="warning" label={summary?.approvalQueueLabel ?? '—'} />
               </div>
             </div>
 
@@ -209,7 +252,7 @@ export default function AdminDashboardPage(): JSX.Element {
                   <p className="text-sm font-medium text-white">Device alerts</p>
                   <p className="mt-1 text-sm text-slate-400">Monitor kiosks and biometric sync health.</p>
                 </div>
-                <StatusBadge variant="success" label="2 resolved" />
+                <StatusBadge variant="success" label={summary?.deviceAlertsLabel ?? '—'} />
               </div>
             </div>
 

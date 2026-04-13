@@ -1,21 +1,43 @@
+import { useQuery } from '@tanstack/react-query'
 import EmptyState from '../../components/EmptyState'
 import SectionCard from '../../components/SectionCard'
 import StatusBadge from '../../components/StatusBadge'
 import type { AttendanceRecord } from '../../types/app'
+import { getAdminAttendanceRecords } from '../../services/supabaseData'
+import { queryKeys } from '../../store/queryKeys'
 
-const records: AttendanceRecord[] = [
-  { id: '1', employeeName: 'Aree Samran', officeName: 'Head Office', date: '2026-04-12', checkInAt: '08:12', checkOutAt: '17:02', status: 'present', workHours: 8.8 },
-  { id: '2', employeeName: 'Nattapong S.', officeName: 'Branch Office', date: '2026-04-12', checkInAt: '08:24', checkOutAt: null, status: 'late', workHours: null },
-]
-
-const attendanceStats = [
-  { label: 'Present', value: '1' },
-  { label: 'Late', value: '1' },
-  { label: 'On leave', value: '0' },
-  { label: 'Average hours', value: '8.8' },
+const fallbackStats = [
+  { label: 'Present', value: '—' },
+  { label: 'Late', value: '—' },
+  { label: 'On leave', value: '—' },
+  { label: 'Average hours', value: '—' },
 ]
 
 export default function AdminAttendancePage(): JSX.Element {
+  const attendanceQuery = useQuery({
+    queryKey: queryKeys.admin.attendance(),
+    queryFn: getAdminAttendanceRecords,
+  })
+
+  const records: AttendanceRecord[] = attendanceQuery.data ?? []
+
+  const attendanceStats = attendanceQuery.data
+    ? [
+        { label: 'Present', value: String(records.filter((record) => record.status === 'present').length) },
+        { label: 'Late', value: String(records.filter((record) => record.status === 'late').length) },
+        { label: 'On leave', value: String(records.filter((record) => record.status === 'leave').length) },
+        {
+          label: 'Average hours',
+          value:
+            records.length > 0
+              ? (records.reduce((total, record) => total + (record.workHours ?? 0), 0) / records.length).toFixed(1)
+              : '0.0',
+        },
+      ]
+    : fallbackStats
+
+  const isEmpty = !attendanceQuery.isLoading && !attendanceQuery.isError && records.length === 0
+
   return (
     <div className="space-y-6">
       <SectionCard
@@ -42,53 +64,56 @@ export default function AdminAttendancePage(): JSX.Element {
           </div>
         }
       >
-        <div className="overflow-hidden rounded-2xl border border-white/10">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-white/10">
-              <thead className="bg-white/[0.03]">
-                <tr className="text-left text-xs uppercase tracking-[0.2em] text-slate-400">
-                  <th className="py-3.5 pl-4 pr-4 font-semibold">Employee</th>
-                  <th className="py-3.5 pr-4 font-semibold">Office</th>
-                  <th className="py-3.5 pr-4 font-semibold">Date</th>
-                  <th className="py-3.5 pr-4 font-semibold">Status</th>
-                  <th className="py-3.5 pr-4 font-semibold">Hours</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/10 bg-slate-950/30">
-                {records.map((record) => (
-                  <tr key={record.id} className="text-sm transition-colors hover:bg-white/[0.03]">
-                    <td className="py-4 pl-4 pr-4">
-                      <div>
-                        <p className="font-semibold tracking-tight text-white">{record.employeeName}</p>
-                        <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">
-                          In {record.checkInAt}
-                          {record.checkOutAt ? ` · Out ${record.checkOutAt}` : ' · Still working'}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="py-4 pr-4 text-slate-300">{record.officeName}</td>
-                    <td className="py-4 pr-4 text-slate-300">{record.date}</td>
-                    <td className="py-4 pr-4">
-                      <StatusBadge
-                        variant={record.status === 'present' ? 'success' : record.status === 'late' ? 'warning' : record.status === 'leave' ? 'info' : 'neutral'}
-                        label={record.status}
-                      />
-                    </td>
-                    <td className="py-4 pr-4 text-slate-300">{record.workHours ?? '-'}</td>
+        {attendanceQuery.isLoading ? (
+          <EmptyState title="Loading attendance" description="Fetching daily attendance records from Supabase." />
+        ) : attendanceQuery.isError ? (
+          <EmptyState title="Unable to load attendance" description="Please check the Supabase connection and try again." />
+        ) : isEmpty ? (
+          <EmptyState
+            title="No attendance records"
+            description="Daily attendance data will appear here once employees start checking in."
+          />
+        ) : (
+          <div className="overflow-hidden rounded-2xl border border-white/10">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-white/10">
+                <thead className="bg-white/[0.03]">
+                  <tr className="text-left text-xs uppercase tracking-[0.2em] text-slate-400">
+                    <th className="py-3.5 pl-4 pr-4 font-semibold">Employee</th>
+                    <th className="py-3.5 pr-4 font-semibold">Office</th>
+                    <th className="py-3.5 pr-4 font-semibold">Date</th>
+                    <th className="py-3.5 pr-4 font-semibold">Status</th>
+                    <th className="py-3.5 pr-4 font-semibold">Hours</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-white/10 bg-slate-950/30">
+                  {records.map((record) => (
+                    <tr key={record.id} className="text-sm transition-colors hover:bg-white/[0.03]">
+                      <td className="py-4 pl-4 pr-4">
+                        <div>
+                          <p className="font-semibold tracking-tight text-white">{record.employeeName}</p>
+                          <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">
+                            In {record.checkInAt}
+                            {record.checkOutAt ? ` · Out ${record.checkOutAt}` : ' · Still working'}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="py-4 pr-4 text-slate-300">{record.officeName}</td>
+                      <td className="py-4 pr-4 text-slate-300">{record.date}</td>
+                      <td className="py-4 pr-4">
+                        <StatusBadge
+                          variant={record.status === 'present' ? 'success' : record.status === 'late' ? 'warning' : record.status === 'leave' ? 'info' : 'neutral'}
+                          label={record.status}
+                        />
+                      </td>
+                      <td className="py-4 pr-4 text-slate-300">{record.workHours ?? '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-        {records.length === 0 ? (
-          <div className="mt-4">
-            <EmptyState
-              title="No attendance records"
-              description="Daily attendance data will appear here once employees start checking in."
-            />
-          </div>
-        ) : null}
+        )}
       </SectionCard>
     </div>
   )

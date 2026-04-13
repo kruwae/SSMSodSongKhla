@@ -6,8 +6,8 @@ import { useAuth } from '../features/auth/AuthProvider'
 
 export default function LoginPage(): JSX.Element {
   const navigate = useNavigate()
-  const { signIn } = useAuth()
-  const [identifier, setIdentifier] = useState('admin@attendance.local')
+  const { signIn, user } = useAuth()
+  const [identifier, setIdentifier] = useState(user?.email ?? 'admin@attendance.local')
   const [password, setPassword] = useState('password')
   const [isSubmitting, setIsSubmitting] = useState(false)
 

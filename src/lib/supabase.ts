@@ -1,28 +1,27 @@
-export type SupabaseClientLike = {
-  auth: {
-    getSession: () => Promise<{ data: { session: null } }>
-    getUser: () => Promise<{ data: { user: null } }>
-  }
-}
+import { createClient } from '@supabase/supabase-js'
+import type { Database } from '../types/database'
 
 export type SupabaseConfig = {
   url: string
   anonKey: string
 }
 
-const placeholderSession = { data: { session: null as null } }
-const placeholderUser = { data: { user: null as null } }
+function getSupabaseConfig(): SupabaseConfig {
+  const url = import.meta.env.VITE_SUPABASE_URL
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-const placeholderClient: SupabaseClientLike = {
-  auth: {
-    getSession: async () => placeholderSession,
-    getUser: async () => placeholderUser,
-  },
+  if (!url || !anonKey) {
+    throw new Error('Missing Supabase environment variables: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are required.')
+  }
+
+  return {
+    url,
+    anonKey,
+  }
 }
 
-export function createSupabaseClient(config?: Partial<SupabaseConfig>): SupabaseClientLike {
-  void config
-  return placeholderClient
-}
+const { url, anonKey } = getSupabaseConfig()
 
-export const supabase = createSupabaseClient()
+export const supabase = createClient<Database>(url, anonKey)
+
+export type SupabaseClient = typeof supabase

@@ -1,20 +1,42 @@
+import { useQuery } from '@tanstack/react-query'
 import EmptyState from '../../components/EmptyState'
 import SectionCard from '../../components/SectionCard'
 import type { OfficeSummary } from '../../types/app'
+import { getAdminOffices } from '../../services/supabaseData'
+import { queryKeys } from '../../store/queryKeys'
 
-const offices: OfficeSummary[] = [
-  { id: '1', name: 'Head Office', address: 'Songkhla, Thailand', latitude: 7.189, longitude: 100.595, employeeCount: 84 },
-  { id: '2', name: 'Branch Office', address: 'Hat Yai, Thailand', latitude: 7.008, longitude: 100.474, employeeCount: 26 },
-]
-
-const officeStats = [
-  { label: 'Offices', value: '2' },
-  { label: 'Employees', value: '110' },
-  { label: 'Geofences', value: '2' },
-  { label: 'Coverage', value: '98%' },
+const fallbackStats = [
+  { label: 'Offices', value: '—' },
+  { label: 'Employees', value: '—' },
+  { label: 'Geofences', value: '—' },
+  { label: 'Coverage', value: '—' },
 ]
 
 export default function AdminOfficesPage(): JSX.Element {
+  const officesQuery = useQuery({
+    queryKey: queryKeys.admin.offices(),
+    queryFn: getAdminOffices,
+  })
+
+  const offices: OfficeSummary[] = officesQuery.data ?? []
+
+  const officeStats = officesQuery.data
+    ? [
+        { label: 'Offices', value: String(offices.length) },
+        { label: 'Employees', value: String(offices.reduce((total, office) => total + (office.employeeCount ?? 0), 0)) },
+        { label: 'Geofences', value: String(offices.filter((office) => office.latitude !== null && office.longitude !== null).length) },
+        {
+          label: 'Coverage',
+          value:
+            offices.length > 0
+              ? `${Math.min(100, Math.round((offices.filter((office) => office.employeeCount > 0).length / offices.length) * 100))}%`
+              : '0%',
+        },
+      ]
+    : fallbackStats
+
+  const isEmpty = !officesQuery.isLoading && !officesQuery.isError && offices.length === 0
+
   return (
     <div className="space-y-6">
       <SectionCard
@@ -59,38 +81,41 @@ export default function AdminOfficesPage(): JSX.Element {
           </div>
         }
       >
-        <div className="space-y-3">
-          {offices.map((office) => (
-            <div
-              key={office.id}
-              className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.03] p-4 shadow-[0_12px_30px_rgba(6,8,20,0.22)]"
-            >
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-300">Office</p>
-                  <h3 className="mt-2 text-lg font-semibold tracking-tight text-white">{office.name}</h3>
-                  <p className="mt-1 text-sm text-slate-400">{office.address}</p>
-                  <p className="mt-2 text-xs text-slate-500">
-                    Coordinates: {office.latitude.toFixed(3)}, {office.longitude.toFixed(3)}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-amber-400/15 bg-amber-400/10 px-4 py-3 text-right">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200">Staffed</p>
-                  <p className="mt-1 text-2xl font-semibold tracking-tight text-white">{office.employeeCount}</p>
-                  <p className="text-xs text-amber-100/70">employees</p>
+        {officesQuery.isLoading ? (
+          <EmptyState title="Loading offices" description="Fetching office coverage and staffing data from Supabase." />
+        ) : officesQuery.isError ? (
+          <EmptyState title="Unable to load offices" description="Please check the Supabase connection and try again." />
+        ) : isEmpty ? (
+          <EmptyState
+            title="No offices yet"
+            description="Create your first office to begin assigning employees, devices, and geofence rules."
+          />
+        ) : (
+          <div className="space-y-3">
+            {offices.map((office) => (
+              <div
+                key={office.id}
+                className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.03] p-4 shadow-[0_12px_30px_rgba(6,8,20,0.22)]"
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-300">Office</p>
+                    <h3 className="mt-2 text-lg font-semibold tracking-tight text-white">{office.name}</h3>
+                    <p className="mt-1 text-sm text-slate-400">{office.address}</p>
+                    <p className="mt-2 text-xs text-slate-500">
+                      Coordinates: {office.latitude.toFixed(3)}, {office.longitude.toFixed(3)}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-amber-400/15 bg-amber-400/10 px-4 py-3 text-right">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200">Staffed</p>
+                    <p className="mt-1 text-2xl font-semibold tracking-tight text-white">{office.employeeCount}</p>
+                    <p className="text-xs text-amber-100/70">employees</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-        {offices.length === 0 ? (
-          <div className="mt-4">
-            <EmptyState
-              title="No offices yet"
-              description="Create your first office to begin assigning employees, devices, and geofence rules."
-            />
+            ))}
           </div>
-        ) : null}
+        )}
       </SectionCard>
     </div>
   )

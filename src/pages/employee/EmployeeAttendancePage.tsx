@@ -1,11 +1,10 @@
+import { useQuery } from '@tanstack/react-query'
+
 import EmptyState from '../../components/EmptyState'
 import SectionCard from '../../components/SectionCard'
 import StatusBadge from '../../components/StatusBadge'
-
-const rows = [
-  { date: '2026-04-12', status: 'present', hours: '8.8', checkIn: '08:12', checkOut: '17:08' },
-  { date: '2026-04-11', status: 'late', hours: '8.1', checkIn: '08:46', checkOut: '17:05' },
-]
+import { useAuth } from '../../features/auth/AuthProvider'
+import { getEmployeeAttendanceRecords } from '../../services/supabaseData'
 
 const statusLabels: Record<string, { label: string; variant: 'success' | 'warning' | 'neutral' }> = {
   present: { label: 'Present', variant: 'success' },
@@ -14,6 +13,22 @@ const statusLabels: Record<string, { label: string; variant: 'success' | 'warnin
 }
 
 export default function EmployeeAttendancePage(): JSX.Element {
+  const { session, user } = useAuth()
+
+  const { data } = useQuery({
+    queryKey: ['employee-attendance', session?.userId ?? user?.id ?? 'anonymous'],
+    queryFn: () => getEmployeeAttendanceRecords(session?.userId ?? user?.id ?? null),
+    enabled: Boolean(session?.userId ?? user?.id),
+  })
+
+  const rows = data?.rows ?? []
+  const summary = data?.summary ?? {
+    thisMonth: '—',
+    averageHours: '—',
+    latestStatus: '—',
+    latestCheckIn: '—',
+  }
+
   return (
     <div className="space-y-5">
       <SectionCard
@@ -24,18 +39,18 @@ export default function EmployeeAttendancePage(): JSX.Element {
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">This month</p>
-            <p className="mt-2 text-2xl font-semibold tracking-tight text-white">22 days</p>
+            <p className="mt-2 text-2xl font-semibold tracking-tight text-white">{summary.thisMonth}</p>
             <p className="mt-1 text-sm text-slate-400">Completed on schedule</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Average hours</p>
-            <p className="mt-2 text-2xl font-semibold tracking-tight text-white">8.4h</p>
+            <p className="mt-2 text-2xl font-semibold tracking-tight text-white">{summary.averageHours}</p>
             <p className="mt-1 text-sm text-slate-400">Per working day</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Latest status</p>
-            <p className="mt-2 text-2xl font-semibold tracking-tight text-white">On time</p>
-            <p className="mt-1 text-sm text-slate-400">Checked in before 08:15</p>
+            <p className="mt-2 text-2xl font-semibold tracking-tight text-white">{summary.latestStatus}</p>
+            <p className="mt-1 text-sm text-slate-400">Checked in {summary.latestCheckIn}</p>
           </div>
         </div>
       </SectionCard>

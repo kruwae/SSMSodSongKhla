@@ -13,3 +13,11 @@ export type AppSession = {
   displayName: string
   officeName?: string | null
 }
+
+export type AppUser = {
+  id: string
+  email: string
+  fullName: string
+  role: AppRole
+  officeName?: string | null
+}

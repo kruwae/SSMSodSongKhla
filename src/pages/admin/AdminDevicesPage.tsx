@@ -1,21 +1,40 @@
+import { useQuery } from '@tanstack/react-query'
 import EmptyState from '../../components/EmptyState'
 import SectionCard from '../../components/SectionCard'
 import StatusBadge from '../../components/StatusBadge'
 import type { DeviceSummary } from '../../types/app'
+import { getAdminDevices } from '../../services/supabaseData'
+import { queryKeys } from '../../store/queryKeys'
 
-const devices: DeviceSummary[] = [
-  { id: '1', name: 'Main Lobby Tablet', officeName: 'Head Office', status: 'approved', lastSeenAt: '2026-04-12T08:30:00.000Z' },
-  { id: '2', name: 'Branch Gate Phone', officeName: 'Branch Office', status: 'pending', lastSeenAt: null },
-]
-
-const deviceStats = [
-  { label: 'Devices', value: '2' },
-  { label: 'Approved', value: '1' },
-  { label: 'Pending', value: '1' },
-  { label: 'Offline', value: '1' },
+const fallbackStats = [
+  { label: 'Devices', value: '—' },
+  { label: 'Approved', value: '—' },
+  { label: 'Pending', value: '—' },
+  { label: 'Offline', value: '—' },
 ]
 
 export default function AdminDevicesPage(): JSX.Element {
+  const devicesQuery = useQuery({
+    queryKey: queryKeys.admin.devices(),
+    queryFn: getAdminDevices,
+  })
+
+  const devices: DeviceSummary[] = devicesQuery.data ?? []
+
+  const deviceStats = devicesQuery.data
+    ? [
+        { label: 'Devices', value: String(devices.length) },
+        { label: 'Approved', value: String(devices.filter((device) => device.status === 'approved').length) },
+        { label: 'Pending', value: String(devices.filter((device) => device.status === 'pending').length) },
+        {
+          label: 'Offline',
+          value: String(devices.filter((device) => !device.lastSeenAt).length),
+        },
+      ]
+    : fallbackStats
+
+  const isEmpty = !devicesQuery.isLoading && !devicesQuery.isError && devices.length === 0
+
   return (
     <div className="space-y-6">
       <SectionCard title="Device approvals" description="Manage capture devices, connectivity, and access readiness.">
@@ -38,36 +57,39 @@ export default function AdminDevicesPage(): JSX.Element {
           </div>
         }
       >
-        <div className="space-y-3">
-          {devices.map((device) => (
-            <div
-              key={device.id}
-              className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.03] p-4 shadow-[0_12px_30px_rgba(6,8,20,0.22)]"
-            >
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-300">Capture device</p>
-                  <h3 className="mt-2 text-lg font-semibold tracking-tight text-white">{device.name}</h3>
-                  <p className="mt-1 text-sm text-slate-400">{device.officeName}</p>
-                </div>
-                <div className="text-left sm:text-right">
-                  <StatusBadge
-                    variant={device.status === 'approved' ? 'success' : device.status === 'pending' ? 'warning' : 'danger'}
-                    label={device.status}
-                  />
-                  <p className="mt-2 text-xs text-slate-400">
-                    {device.lastSeenAt ? `Last seen ${new Date(device.lastSeenAt).toLocaleString()}` : 'Never seen online'}
-                  </p>
+        {devicesQuery.isLoading ? (
+          <EmptyState title="Loading devices" description="Fetching device approvals and connectivity data from Supabase." />
+        ) : devicesQuery.isError ? (
+          <EmptyState title="Unable to load devices" description="Please check the Supabase connection and try again." />
+        ) : isEmpty ? (
+          <EmptyState title="No devices yet" description="Registered check-in devices and approvals will appear here." />
+        ) : (
+          <div className="space-y-3">
+            {devices.map((device) => (
+              <div
+                key={device.id}
+                className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.03] p-4 shadow-[0_12px_30px_rgba(6,8,20,0.22)]"
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-300">Capture device</p>
+                    <h3 className="mt-2 text-lg font-semibold tracking-tight text-white">{device.name}</h3>
+                    <p className="mt-1 text-sm text-slate-400">{device.officeName}</p>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <StatusBadge
+                      variant={device.status === 'approved' ? 'success' : device.status === 'pending' ? 'warning' : 'danger'}
+                      label={device.status}
+                    />
+                    <p className="mt-2 text-xs text-slate-400">
+                      {device.lastSeenAt ? `Last seen ${new Date(device.lastSeenAt).toLocaleString()}` : 'Never seen online'}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-        {devices.length === 0 ? (
-          <div className="mt-4">
-            <EmptyState title="No devices yet" description="Registered check-in devices and approvals will appear here." />
+            ))}
           </div>
-        ) : null}
+        )}
       </SectionCard>
     </div>
   )

@@ -1,11 +1,15 @@
+import { useQuery } from '@tanstack/react-query'
+
 import EmptyState from '../../components/EmptyState'
 import SectionCard from '../../components/SectionCard'
 import StatusBadge from '../../components/StatusBadge'
+import { useAuth } from '../../features/auth/AuthProvider'
+import { getEmployeeDashboard } from '../../services/supabaseData'
 
-const todayStats = [
-  { label: 'Attendance', value: 'Checked in', variant: 'success' as const },
-  { label: 'Office', value: 'Head Office', variant: 'info' as const },
-  { label: 'Shift', value: 'Ends 17:00', variant: 'gold' as const },
+const fallbackStats = [
+  { label: 'Attendance', value: 'No data', variant: 'neutral' as const },
+  { label: 'Office', value: 'Unavailable', variant: 'neutral' as const },
+  { label: 'Shift', value: 'Unavailable', variant: 'neutral' as const },
 ]
 
 const quickActions = [
@@ -14,6 +18,22 @@ const quickActions = [
 ]
 
 export default function EmployeeHomePage(): JSX.Element {
+  const { session, user } = useAuth()
+
+  const { data } = useQuery({
+    queryKey: ['employee-dashboard', session?.userId ?? user?.id ?? 'anonymous'],
+    queryFn: () => getEmployeeDashboard(session?.userId ?? user?.id ?? null),
+    enabled: Boolean(session?.userId ?? user?.id),
+  })
+
+  const todayStats = data?.todayStats ?? fallbackStats
+  const hasCheckInData = Boolean(data?.latestAttendance)
+  const notes = data?.notes ?? [
+    'Verify your location before submitting check-in.',
+    'Keep your shift time handy for quick reference.',
+    'Review profile details before requesting leave.',
+  ]
+
   return (
     <div className="space-y-6">
       <SectionCard
@@ -59,27 +79,52 @@ export default function EmployeeHomePage(): JSX.Element {
             </div>
           }
         >
-          <EmptyState
-            title="Ready for check-in"
-            description="Open the check-in page to verify location, device, and submit today's attendance."
-            action={
-              <a
-                className="inline-flex items-center justify-center rounded-2xl bg-[linear-gradient(135deg,hsl(var(--primary)),#4f46e5)] px-4 py-2.5 text-sm font-semibold text-[hsl(var(--primary-foreground))] shadow-[0_16px_30px_rgba(79,70,229,0.22)] transition hover:translate-y-[-1px]"
-                href="/check-in"
-              >
-                Open check-in
-              </a>
-            }
-          />
+          {hasCheckInData ? (
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-white/8 bg-white/5 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[hsl(var(--muted-foreground))]">
+                  Latest check-in
+                </p>
+                <p className="mt-3 text-xl font-bold tracking-tight text-[hsl(var(--foreground))]">
+                  {data?.latestAttendance?.checkIn ?? '—'}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/8 bg-white/5 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[hsl(var(--muted-foreground))]">
+                  Latest check-out
+                </p>
+                <p className="mt-3 text-xl font-bold tracking-tight text-[hsl(var(--foreground))]">
+                  {data?.latestAttendance?.checkOut ?? '—'}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/8 bg-white/5 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[hsl(var(--muted-foreground))]">
+                  Latest status
+                </p>
+                <p className="mt-3 text-xl font-bold tracking-tight text-[hsl(var(--foreground))]">
+                  {data?.latestAttendance?.status ?? '—'}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <EmptyState
+              title="Ready for check-in"
+              description="Open the check-in page to verify location, device, and submit today's attendance."
+              action={
+                <a
+                  className="inline-flex items-center justify-center rounded-2xl bg-[linear-gradient(135deg,hsl(var(--primary)),#4f46e5)] px-4 py-2.5 text-sm font-semibold text-[hsl(var(--primary-foreground))] shadow-[0_16px_30px_rgba(79,70,229,0.22)] transition hover:translate-y-[-1px]"
+                  href="/check-in"
+                >
+                  Open check-in
+                </a>
+              }
+            />
+          )}
         </SectionCard>
 
         <SectionCard title="Quick notes" description="Helpful reminders for your daily workflow.">
           <div className="space-y-3">
-            {[
-              'Verify your location before submitting check-in.',
-              'Keep your shift time handy for quick reference.',
-              'Review profile details before requesting leave.',
-            ].map((note, index) => (
+            {notes.map((note, index) => (
               <div key={note} className="rounded-2xl border border-white/8 bg-white/5 p-4">
                 <div className="flex items-start gap-3">
                   <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[hsla(var(--ring),0.12)] text-xs font-bold text-[#fde68a]">
