@@ -26,10 +26,7 @@ export default function AdminDevicesPage(): JSX.Element {
         { label: 'Devices', value: String(devices.length) },
         { label: 'Approved', value: String(devices.filter((device) => device.status === 'approved').length) },
         { label: 'Pending', value: String(devices.filter((device) => device.status === 'pending').length) },
-        {
-          label: 'Offline',
-          value: String(devices.filter((device) => !device.lastSeenAt).length),
-        },
+        { label: 'Offline', value: String(devices.filter((device) => !device.lastSeenAt).length) },
       ]
     : fallbackStats
 
@@ -50,7 +47,7 @@ export default function AdminDevicesPage(): JSX.Element {
 
       <SectionCard
         title="Devices"
-        description="Approve capture devices and monitor connectivity from the queue."
+        description="Approve devices and monitor connectivity from the queue."
         actions={
           <div className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">
             Approval queue
@@ -64,7 +61,7 @@ export default function AdminDevicesPage(): JSX.Element {
         ) : isEmpty ? (
           <EmptyState title="No devices yet" description="Registered check-in devices and approvals will appear here." />
         ) : (
-          <div className="space-y-3">
+          <div className="grid gap-3 xl:grid-cols-2">
             {devices.map((device) => (
               <div
                 key={device.id}

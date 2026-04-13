@@ -4,27 +4,41 @@ import { useQuery } from '@tanstack/react-query'
 import EmptyState from '../../components/EmptyState'
 import SectionCard from '../../components/SectionCard'
 import { useAuth } from '../../features/auth/AuthProvider'
-import { getEmployeeLeaveRequests } from '../../services/supabaseData'
+import { getEmployeeLeaveRequests, type LeaveRequestSummary } from '../../services/supabaseData'
 
 const requestTypes = ['Vacation', 'Sick leave', 'Personal day', 'Remote work']
 
+type EmployeeLeaveData = Awaited<ReturnType<typeof getEmployeeLeaveRequests>>['data']
+
+function formatLeaveType(type: LeaveRequestSummary['type']): string {
+  const mapping: Record<LeaveRequestSummary['type'], string> = {
+    annual: 'Vacation',
+    sick: 'Sick leave',
+    personal: 'Personal day',
+    other: 'Remote work',
+  }
+
+  return mapping[type]
+}
+
 export default function EmployeeLeavePage(): JSX.Element {
   const { session, user } = useAuth()
+  const profileId = session?.userId ?? user?.id ?? null
   const [leaveType, setLeaveType] = useState(requestTypes[0])
   const [duration, setDuration] = useState('Full day')
 
   const { data } = useQuery({
-    queryKey: ['employee-leave', session?.userId ?? user?.id ?? 'anonymous'],
-    queryFn: () => getEmployeeLeaveRequests(session?.userId ?? user?.id ?? null),
-    enabled: Boolean(session?.userId ?? user?.id),
+    queryKey: ['employee-leave', profileId ?? 'anonymous'],
+    queryFn: () => getEmployeeLeaveRequests(profileId),
+    enabled: Boolean(profileId),
   })
 
-  const balance = data?.balance ?? '—'
-  const history = data?.requests ?? []
+  const history: EmployeeLeaveData = data?.data ?? []
+  const balance = history.length > 0 ? `${Math.max(0, 10 - history.filter((item) => item.status === 'approved').length)} days` : '—'
 
   const summaryItems = useMemo(
     () => [
-      { label: 'Annual leave balance', value: `${balance} days remaining` },
+      { label: 'Annual leave balance', value: `${balance} remaining` },
       { label: 'Approval flow', value: 'Manager review required' },
       { label: 'Processing time', value: 'Usually within 1 business day' },
     ],
@@ -120,7 +134,7 @@ export default function EmployeeLeavePage(): JSX.Element {
                 <div className="space-y-3">
                   {history.map((request) => (
                     <div key={request.id} className="rounded-xl border border-white/10 bg-white/5 px-3 py-3">
-                      <p className="text-sm font-medium text-white">{request.type}</p>
+                      <p className="text-sm font-medium text-white">{formatLeaveType(request.type)}</p>
                       <p className="mt-1 text-sm text-slate-400">
                         {request.startDate} · {request.status}
                       </p>

@@ -4,7 +4,7 @@ import EmptyState from '../../components/EmptyState'
 import SectionCard from '../../components/SectionCard'
 import StatusBadge from '../../components/StatusBadge'
 import { useAuth } from '../../features/auth/AuthProvider'
-import { getEmployeeAttendanceRecords } from '../../services/supabaseData'
+import { getEmployeeAttendanceRecords, type AttendanceSummary } from '../../services/supabaseData'
 
 const statusLabels: Record<string, { label: string; variant: 'success' | 'warning' | 'neutral' }> = {
   present: { label: 'Present', variant: 'success' },
@@ -12,21 +12,40 @@ const statusLabels: Record<string, { label: string; variant: 'success' | 'warnin
   absent: { label: 'Absent', variant: 'neutral' },
 }
 
+type EmployeeAttendanceData = Awaited<ReturnType<typeof getEmployeeAttendanceRecords>>['data']
+
+function formatStatus(row: AttendanceSummary): { label: string; variant: 'success' | 'warning' | 'neutral' } {
+  if (row.lateStatus) return statusLabels.late
+  if (row.checkOutAt) return statusLabels.present
+  return statusLabels.absent
+}
+
+function formatHours(value: AttendanceSummary['workHours']): string {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return `${value.toFixed(1)}h`
+  }
+  return '—'
+}
+
 export default function EmployeeAttendancePage(): JSX.Element {
   const { session, user } = useAuth()
+  const profileId = session?.userId ?? user?.id ?? null
 
   const { data } = useQuery({
-    queryKey: ['employee-attendance', session?.userId ?? user?.id ?? 'anonymous'],
-    queryFn: () => getEmployeeAttendanceRecords(session?.userId ?? user?.id ?? null),
-    enabled: Boolean(session?.userId ?? user?.id),
+    queryKey: ['employee-attendance', profileId ?? 'anonymous'],
+    queryFn: () => getEmployeeAttendanceRecords(profileId),
+    enabled: Boolean(profileId),
   })
 
-  const rows = data?.rows ?? []
-  const summary = data?.summary ?? {
-    thisMonth: '—',
-    averageHours: '—',
-    latestStatus: '—',
-    latestCheckIn: '—',
+  const rows: EmployeeAttendanceData = data?.data ?? []
+  const summary = {
+    thisMonth: rows.length > 0 ? `${rows.length}` : '—',
+    averageHours:
+      rows.length > 0
+        ? `${(rows.reduce((total, row) => total + (typeof row.workHours === 'number' ? row.workHours : 0), 0) / rows.length).toFixed(1)}h`
+        : '—',
+    latestStatus: rows[0] ? (rows[0].lateStatus ? 'Late' : rows[0].checkOutAt ? 'Present' : 'In progress') : '—',
+    latestCheckIn: rows[0]?.checkInAt ?? '—',
   }
 
   return (
@@ -67,21 +86,23 @@ export default function EmployeeAttendancePage(): JSX.Element {
         {rows.length > 0 ? (
           <div className="space-y-3">
             {rows.map((row) => {
-              const badge = statusLabels[row.status] ?? statusLabels.absent
+              const badge = formatStatus(row)
 
               return (
                 <article
-                  key={row.date}
+                  key={row.id}
                   className="rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:border-amber-400/30 hover:bg-white/[0.07]"
                 >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-base font-semibold tracking-tight text-white">{row.date}</h3>
+                        <h3 className="text-base font-semibold tracking-tight text-white">
+                          {row.checkInAt.split('T')[0]}
+                        </h3>
                         <StatusBadge label={badge.label} variant={badge.variant} />
                       </div>
                       <p className="mt-1 text-sm text-slate-400">
-                        Check-in {row.checkIn} · Check-out {row.checkOut}
+                        Check-in {row.checkInAt} · Check-out {row.checkOutAt ?? '—'}
                       </p>
                     </div>
 
@@ -90,13 +111,15 @@ export default function EmployeeAttendancePage(): JSX.Element {
                         <p className="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">
                           Hours
                         </p>
-                        <p className="mt-1 text-sm font-semibold text-slate-100">{row.hours}h</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-100">{formatHours(row.workHours)}</p>
                       </div>
                       <div className="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
                         <p className="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">
                           Status
                         </p>
-                        <p className="mt-1 text-sm font-semibold capitalize text-slate-100">{row.status}</p>
+                        <p className="mt-1 text-sm font-semibold capitalize text-slate-100">
+                          {row.lateStatus ? 'Late' : row.checkOutAt ? 'Present' : 'In progress'}
+                        </p>
                       </div>
                     </div>
                   </div>

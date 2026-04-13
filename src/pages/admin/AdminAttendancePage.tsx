@@ -40,10 +40,7 @@ export default function AdminAttendancePage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <SectionCard
-        title="Attendance overview"
-        description="Review daily presence, late arrivals, and logged work hours across offices."
-      >
+      <SectionCard title="Attendance overview" description="Review presence, late arrivals, and logged hours.">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {attendanceStats.map((stat) => (
             <div key={stat.label} className="rounded-2xl border border-white/8 bg-white/5 p-4">
@@ -69,10 +66,7 @@ export default function AdminAttendancePage(): JSX.Element {
         ) : attendanceQuery.isError ? (
           <EmptyState title="Unable to load attendance" description="Please check the Supabase connection and try again." />
         ) : isEmpty ? (
-          <EmptyState
-            title="No attendance records"
-            description="Daily attendance data will appear here once employees start checking in."
-          />
+          <EmptyState title="No attendance records" description="Daily attendance data will appear here once employees start checking in." />
         ) : (
           <div className="overflow-hidden rounded-2xl border border-white/10">
             <div className="overflow-x-auto">

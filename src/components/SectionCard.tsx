@@ -18,7 +18,7 @@ export function SectionCard({ title, description, actions, children, className }
       )}
     >
       {(title || description || actions) && (
-        <div className="mb-5 flex flex-col gap-4 border-b border-white/8 pb-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="mb-4 flex flex-col gap-3 border-b border-white/8 pb-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             {title ? (
               <div className="flex items-center gap-2">
@@ -30,7 +30,7 @@ export function SectionCard({ title, description, actions, children, className }
               <p className="mt-1.5 max-w-3xl text-sm leading-6 text-[hsl(var(--muted-foreground))]">{description}</p>
             ) : null}
           </div>
-          {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+          {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
         </div>
       )}
       {children}

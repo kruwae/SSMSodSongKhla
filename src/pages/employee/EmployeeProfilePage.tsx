@@ -3,25 +3,60 @@ import { useQuery } from '@tanstack/react-query'
 import EmptyState from '../../components/EmptyState'
 import SectionCard from '../../components/SectionCard'
 import { useAuth } from '../../features/auth/AuthProvider'
-import { getEmployeeProfile } from '../../services/supabaseData'
+import { getEmployeeProfile, type EmployeeSummary } from '../../services/supabaseData'
+
+type EmployeeProfileData = Awaited<ReturnType<typeof getEmployeeProfile>>['data']
+
+function getInitials(name: string | null | undefined): string {
+  if (!name) return '—'
+  return name
+    .split(' ')
+    .map((part) => part[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
+}
+
+function getProfileRoleLabel(profile: EmployeeProfileData, fallbackRole?: string | null): string {
+  if (profile && 'role' in profile) {
+    return profile.role === 'admin' ? 'Admin' : profile.role === 'manager' ? 'Manager' : 'Employee'
+  }
+  return fallbackRole ?? 'Employee'
+}
+
+function getProfileName(profile: EmployeeProfileData, fallbackName: string): string {
+  if (profile && 'fullName' in profile) return profile.fullName
+  if (profile && 'displayName' in profile) return profile.displayName
+  return fallbackName
+}
+
+function getProfileEmail(profile: EmployeeProfileData, fallbackEmail: string): string {
+  if (profile && 'email' in profile) return profile.email
+  return fallbackEmail
+}
+
+function getDepartmentName(profile: EmployeeProfileData): string {
+  if (profile && 'departmentName' in profile) return profile.departmentName ?? ''
+  return ''
+}
 
 export default function EmployeeProfilePage(): JSX.Element {
   const { session, user } = useAuth()
+  const profileId = session?.userId ?? user?.id ?? null
 
   const { data } = useQuery({
-    queryKey: ['employee-profile', session?.userId ?? user?.id ?? 'anonymous'],
-    queryFn: () => getEmployeeProfile(session?.userId ?? user?.id ?? null),
-    enabled: Boolean(session?.userId ?? user?.id),
+    queryKey: ['employee-profile', profileId ?? 'anonymous'],
+    queryFn: () => getEmployeeProfile(profileId),
+    enabled: Boolean(profileId),
   })
 
-  const profile = data ?? null
-  const initials =
-    profile?.displayName
-      ?.split(' ')
-      .map((part) => part[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase() ?? '—'
+  const profile = data?.data ?? null
+  const displayName = getProfileName(profile, session?.displayName ?? user?.fullName ?? 'Profile unavailable')
+  const email = getProfileEmail(profile, session?.email ?? user?.email ?? 'No email available')
+  const roleLabel = getProfileRoleLabel(profile, session?.role ?? user?.role ?? null)
+  const initials = getInitials(displayName)
+  const departmentName = getDepartmentName(profile)
 
   return (
     <div className="space-y-5">
@@ -37,11 +72,9 @@ export default function EmployeeProfilePage(): JSX.Element {
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Employee account</p>
-                <h3 className="mt-1 text-xl font-semibold tracking-tight text-white">
-                  {profile?.displayName ?? 'Profile unavailable'}
-                </h3>
+                <h3 className="mt-1 text-xl font-semibold tracking-tight text-white">{displayName}</h3>
                 <p className="mt-1 text-sm text-slate-400">
-                  {profile?.roleLabel ?? 'Employee'} · {profile?.email ?? user?.email ?? 'No email available'}
+                  {roleLabel} · {email}
                 </p>
               </div>
             </div>
@@ -51,7 +84,7 @@ export default function EmployeeProfilePage(): JSX.Element {
                 <span className="text-sm font-medium text-slate-200">Full name</span>
                 <input
                   type="text"
-                  defaultValue={profile?.displayName ?? ''}
+                  defaultValue={displayName}
                   className="h-11 rounded-xl border border-white/10 bg-slate-950/60 px-3 text-sm text-white outline-none transition focus:border-amber-400/40"
                 />
               </label>
@@ -60,7 +93,7 @@ export default function EmployeeProfilePage(): JSX.Element {
                 <span className="text-sm font-medium text-slate-200">Email</span>
                 <input
                   type="email"
-                  defaultValue={profile?.email ?? user?.email ?? ''}
+                  defaultValue={email}
                   className="h-11 rounded-xl border border-white/10 bg-slate-950/60 px-3 text-sm text-white outline-none transition focus:border-amber-400/40"
                 />
               </label>
@@ -69,7 +102,7 @@ export default function EmployeeProfilePage(): JSX.Element {
                 <span className="text-sm font-medium text-slate-200">Department</span>
                 <input
                   type="text"
-                  defaultValue={profile?.departmentName ?? ''}
+                  defaultValue={departmentName}
                   className="h-11 rounded-xl border border-white/10 bg-slate-950/60 px-3 text-sm text-white outline-none transition focus:border-amber-400/40"
                 />
               </label>
@@ -78,7 +111,7 @@ export default function EmployeeProfilePage(): JSX.Element {
                 <span className="text-sm font-medium text-slate-200">Role</span>
                 <input
                   type="text"
-                  defaultValue={profile?.roleLabel ?? 'Employee'}
+                  defaultValue={roleLabel}
                   className="h-11 rounded-xl border border-white/10 bg-slate-950/60 px-3 text-sm text-white outline-none transition focus:border-amber-400/40"
                 />
               </label>

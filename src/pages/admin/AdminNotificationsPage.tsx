@@ -1,31 +1,31 @@
 import { useQuery } from '@tanstack/react-query'
 import EmptyState from '../../components/EmptyState'
 import SectionCard from '../../components/SectionCard'
-import type { NotificationItem } from '../../types/app'
+import type { NotificationSummary } from '../../services/supabaseData'
 import { getAdminNotifications } from '../../services/supabaseData'
 import { queryKeys } from '../../store/queryKeys'
 
 const fallbackStats = [
   { label: 'Total', value: '—' },
   { label: 'Unread', value: '—' },
-  { label: 'Approvals', value: '—' },
-  { label: 'Updates', value: '—' },
+  { label: 'Admin', value: '—' },
+  { label: 'System', value: '—' },
 ]
 
 export default function AdminNotificationsPage(): JSX.Element {
   const notificationsQuery = useQuery({
-    queryKey: queryKeys.admin.notifications(),
+    queryKey: queryKeys.admin.notifications,
     queryFn: getAdminNotifications,
   })
 
-  const notifications: NotificationItem[] = notificationsQuery.data ?? []
+  const notifications: NotificationSummary[] = notificationsQuery.data ?? []
 
   const notificationStats = notificationsQuery.data
     ? [
         { label: 'Total', value: String(notifications.length) },
-        { label: 'Unread', value: String(notifications.filter((item) => !item.read).length) },
-        { label: 'Approvals', value: String(notifications.filter((item) => item.title.toLowerCase().includes('approval')).length) },
-        { label: 'Updates', value: String(notifications.filter((item) => item.title.toLowerCase().includes('update')).length) },
+        { label: 'Unread', value: String(notifications.filter((item) => !item.isRead).length) },
+        { label: 'Admin', value: String(notifications.filter((item) => item.category === 'admin').length) },
+        { label: 'System', value: String(notifications.filter((item) => item.category === 'system').length) },
       ]
     : fallbackStats
 
@@ -69,21 +69,21 @@ export default function AdminNotificationsPage(): JSX.Element {
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-300">Alert</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-300">{item.category}</p>
                     <h3 className="mt-2 text-lg font-semibold tracking-tight text-white">{item.title}</h3>
-                    <p className="mt-2 text-sm text-slate-300">{item.message}</p>
+                    <p className="mt-2 text-sm text-slate-300">{item.body}</p>
                   </div>
                   <div className="text-left sm:text-right">
                     <span
                       className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset shadow-sm backdrop-blur-sm ${
-                        item.read
+                        item.isRead
                           ? 'bg-slate-500/10 text-slate-300 ring-slate-400/20'
                           : 'bg-sky-500/10 text-sky-200 ring-sky-400/20'
                       }`}
                     >
-                      {item.read ? 'Read' : 'Unread'}
+                      {item.isRead ? 'Read' : 'Unread'}
                     </span>
-                    <p className="mt-2 text-xs text-slate-500">{new Date(item.createdAt).toLocaleString()}</p>
+                    <p className="mt-2 text-xs text-slate-500">{item.sentAt ? new Date(item.sentAt).toLocaleString() : '—'}</p>
                   </div>
                 </div>
               </div>

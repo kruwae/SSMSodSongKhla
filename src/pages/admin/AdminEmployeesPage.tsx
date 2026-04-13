@@ -7,10 +7,10 @@ import { getAdminEmployees } from '../../services/supabaseData'
 import { queryKeys } from '../../store/queryKeys'
 
 const fallbackStats = [
-  { label: 'Total employees', value: '—' },
+  { label: 'Total', value: '—' },
   { label: 'Active', value: '—' },
   { label: 'Pending', value: '—' },
-  { label: 'Assigned offices', value: '—' },
+  { label: 'Offices', value: '—' },
 ]
 
 export default function AdminEmployeesPage(): JSX.Element {
@@ -23,13 +23,10 @@ export default function AdminEmployeesPage(): JSX.Element {
 
   const employeeStats = employeesQuery.data
     ? [
-        { label: 'Total employees', value: String(employees.length) },
+        { label: 'Total', value: String(employees.length) },
         { label: 'Active', value: String(employees.filter((employee) => employee.status === 'active').length) },
         { label: 'Pending', value: String(employees.filter((employee) => employee.status === 'pending').length) },
-        {
-          label: 'Assigned offices',
-          value: String(new Set(employees.map((employee) => employee.officeName).filter(Boolean)).size),
-        },
+        { label: 'Offices', value: String(new Set(employees.map((employee) => employee.officeName).filter(Boolean)).size) },
       ]
     : fallbackStats
 
@@ -37,10 +34,7 @@ export default function AdminEmployeesPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <SectionCard
-        title="Employee directory"
-        description="Review onboarding status, office assignment, and account readiness across the workforce."
-      >
+      <SectionCard title="Employee directory" description="Track onboarding, office assignment, and access readiness.">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {employeeStats.map((stat) => (
             <div key={stat.label} className="rounded-2xl border border-white/8 bg-white/5 p-4">
@@ -53,11 +47,11 @@ export default function AdminEmployeesPage(): JSX.Element {
 
       <SectionCard
         title="Employees"
-        description="Directory, assignment, and onboarding overview with status-ready actions."
+        description="Directory and onboarding overview with quick status checks."
         actions={
           <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
             <span className="h-2 w-2 rounded-full bg-sky-400" />
-            Directory synced
+            Synced
           </div>
         }
       >

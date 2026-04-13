@@ -39,10 +39,7 @@ export default function AdminOfficesPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <SectionCard
-        title="Office coverage"
-        description="Track office locations, geofences, and staffing across your attendance network."
-      >
+      <SectionCard title="Office coverage" description="Track office locations, geofences, and staffing.">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {officeStats.map((stat) => (
             <div key={stat.label} className="rounded-2xl border border-white/8 bg-white/5 p-4">
@@ -55,10 +52,10 @@ export default function AdminOfficesPage(): JSX.Element {
 
       <SectionCard
         title="Office map"
-        description="Map integration placeholder for office coverage, geofencing, and location awareness."
+        description="Map placeholder for coverage and geofencing."
         actions={
           <div className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">
-            Live coverage preview
+            Live preview
           </div>
         }
       >
@@ -73,7 +70,7 @@ export default function AdminOfficesPage(): JSX.Element {
 
       <SectionCard
         title="Office list"
-        description="Manage office metadata, coordinates, and staffing from a single view."
+        description="Manage office metadata, coordinates, and staffing in one view."
         actions={
           <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
             <span className="h-2 w-2 rounded-full bg-emerald-400" />
@@ -86,12 +83,9 @@ export default function AdminOfficesPage(): JSX.Element {
         ) : officesQuery.isError ? (
           <EmptyState title="Unable to load offices" description="Please check the Supabase connection and try again." />
         ) : isEmpty ? (
-          <EmptyState
-            title="No offices yet"
-            description="Create your first office to begin assigning employees, devices, and geofence rules."
-          />
+          <EmptyState title="No offices yet" description="Create your first office to assign employees, devices, and geofence rules." />
         ) : (
-          <div className="space-y-3">
+          <div className="grid gap-3 xl:grid-cols-2">
             {offices.map((office) => (
               <div
                 key={office.id}

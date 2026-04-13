@@ -25,6 +25,7 @@ const createMockUser = (identifier: string): AppUser => ({
   email: identifier.includes('@') ? identifier : 'employee@attendance.local',
   fullName: 'Attendance User',
   role: identifier.includes('admin') ? 'admin' : 'employee',
+  officeName: 'Head Office',
 })
 
 export function AuthProvider({ children }: { children: ReactNode }): JSX.Element {
@@ -37,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       session,
       user,
       isLoading,
-      signIn: async (identifier: string) => {
+      signIn: async (identifier: string, _password: string) => {
         setIsLoading(true)
         const nextSession = createMockSession(identifier)
         setSession(nextSession)

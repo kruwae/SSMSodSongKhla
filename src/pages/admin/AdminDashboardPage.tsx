@@ -98,31 +98,31 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       <section className="overflow-hidden rounded-[28px] border border-amber-300/20 bg-gradient-to-br from-[#17182f] via-[#11172b] to-[#0b1020] p-6 shadow-[0_24px_80px_rgba(3,7,18,0.55)] sm:p-7">
-        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top_right,_rgba(96,165,250,0.22),_transparent_34%),radial-gradient(circle_at_bottom_left,_rgba(168,85,247,0.18),_transparent_36%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(96,165,250,0.22),_transparent_34%),radial-gradient(circle_at_bottom_left,_rgba(168,85,247,0.18),_transparent_36%)]" />
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl space-y-3">
             <div className="inline-flex items-center rounded-full border border-amber-300/25 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-200 shadow-[0_0_0_1px_rgba(251,191,36,0.06)]">
-              ภาพรวมผู้ดูแลระบบ
+              ภาพรวมผู้ดูแล
             </div>
             <div className="space-y-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-white md:text-4xl">แดชบอร์ดการลงเวลาปฏิบัติงาน</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-white md:text-4xl">แดชบอร์ดการลงเวลา</h1>
               <p className="max-w-xl text-sm leading-6 text-slate-300 md:text-base">
-                ติดตามการเช็กชื่อ การอนุมัติคำขอ และสถานะอุปกรณ์จากศูนย์กลางข้อมูลเดียวสำหรับการปฏิบัติงานประจำวัน
+                ติดตามการเช็กชื่อ คำขอ และอุปกรณ์จากศูนย์กลางเดียว
               </p>
             </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-white/10 bg-white/7 px-4 py-3 shadow-[0_14px_30px_rgba(2,6,23,0.28)] backdrop-blur">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">รายการลงเวลาล่าสุด</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">ลงเวลาล่าสุด</p>
               <p className="mt-1 text-2xl font-semibold text-white">{summary?.attendance.length ?? '—'}</p>
             </div>
             <div className="rounded-2xl border border-amber-300/20 bg-white/7 px-4 py-3 shadow-[0_14px_30px_rgba(2,6,23,0.28)] backdrop-blur">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">รายการรออนุมัติ</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">รออนุมัติ</p>
               <p className="mt-1 text-2xl font-semibold text-white">{approvalQueueCount}</p>
             </div>
             <div className="rounded-2xl border border-sky-400/20 bg-white/7 px-4 py-3 shadow-[0_14px_30px_rgba(2,6,23,0.28)] backdrop-blur">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">อุปกรณ์ที่ออนไลน์</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">ออนไลน์</p>
               <p className="mt-1 text-2xl font-semibold text-white">{onlineDeviceCount}</p>
             </div>
           </div>
@@ -130,13 +130,13 @@ export default function AdminDashboardPage() {
       </section>
 
       {dashboardQuery.isLoading ? (
-        <SectionCard title="กำลังโหลดข้อมูลแดชบอร์ด" description="กำลังดึงข้อมูลการลงเวลาจาก Supabase">
-          <EmptyState title="กำลังโหลดแดชบอร์ด" description="กรุณารอสักครู่ ระบบกำลังโหลดข้อมูลล่าสุด" />
+        <SectionCard title="กำลังโหลดแดชบอร์ด" description="กำลังดึงข้อมูลล่าสุดจาก Supabase">
+          <EmptyState title="กำลังโหลดข้อมูล" description="กรุณารอสักครู่" />
         </SectionCard>
       ) : null}
 
       {dashboardQuery.isError ? (
-        <SectionCard title="ไม่สามารถโหลดแดชบอร์ดได้" description="เกิดปัญหาในการดึงข้อมูลจาก Supabase">
+        <SectionCard title="โหลดแดชบอร์ดไม่สำเร็จ" description="เกิดปัญหาในการดึงข้อมูลจาก Supabase">
           <EmptyState title="โหลดข้อมูลไม่สำเร็จ" description="กรุณาตรวจสอบการเชื่อมต่อ Supabase แล้วลองใหม่อีกครั้ง" />
         </SectionCard>
       ) : null}
@@ -151,10 +151,7 @@ export default function AdminDashboardPage() {
             <div className="space-y-3">
               <div className="flex items-end justify-between gap-4">
                 <p className="text-3xl font-semibold tracking-tight text-white">{metric.value}</p>
-                <StatusBadge
-                  variant={metric.trend.includes('รอ') ? 'warning' : 'success'}
-                  label={metric.trend}
-                />
+                <StatusBadge variant={metric.trend.includes('รอ') ? 'warning' : 'success'} label={metric.trend} />
               </div>
               <p className="text-sm text-slate-400">{metric.note}</p>
             </div>
@@ -164,28 +161,28 @@ export default function AdminDashboardPage() {
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)]">
         <SectionCard
-          title="สรุปการปฏิบัติงาน"
-          description="ภาพรวมการลงเวลา งานที่รอดำเนินการ และสถานะอุปกรณ์"
+          title="สรุปงาน"
+          description="การลงเวลา งานที่รอ และสถานะอุปกรณ์"
           className="border border-white/10 bg-[#10172a]/90 shadow-[0_18px_40px_rgba(3,7,18,0.35)] backdrop-blur"
         >
           <div className="grid gap-4 md:grid-cols-2">
             <div className="rounded-2xl border border-sky-400/15 bg-gradient-to-br from-[#121a31] to-[#0f1528] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-              <p className="text-sm font-medium text-slate-300">ความคืบหน้าการลงเวลา</p>
+              <p className="text-sm font-medium text-slate-300">การลงเวลาวันนี้</p>
               <div className="mt-3 flex items-end justify-between gap-4">
                 <div>
                   <p className="text-2xl font-semibold text-white">{stats?.attendanceToday ?? '—'}</p>
-                  <p className="mt-1 text-sm text-slate-400">จำนวนรายการลงเวลาวันนี้</p>
+                  <p className="mt-1 text-sm text-slate-400">รายการทั้งหมด</p>
                 </div>
                 <StatusBadge variant="success" label="สด" />
               </div>
             </div>
 
             <div className="rounded-2xl border border-amber-300/15 bg-gradient-to-br from-[#141a32] to-[#0f1528] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-              <p className="text-sm font-medium text-slate-300">ตัวชี้วัดความเสี่ยง</p>
+              <p className="text-sm font-medium text-slate-300">ความเสี่ยง</p>
               <div className="mt-3 flex items-end justify-between gap-4">
                 <div>
                   <p className="text-2xl font-semibold text-white">{lateCount}</p>
-                  <p className="mt-1 text-sm text-slate-400">จำนวนบุคลากรที่มาสายจากข้อมูลล่าสุด</p>
+                  <p className="mt-1 text-sm text-slate-400">มาสายจากข้อมูลล่าสุด</p>
                 </div>
                 <StatusBadge variant="warning" label="ตรวจสอบ" />
               </div>
@@ -196,7 +193,7 @@ export default function AdminDashboardPage() {
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
               <div className="flex items-center justify-between gap-4">
                 <h3 className="text-sm font-semibold text-white">กิจกรรมล่าสุด</h3>
-                <span className="text-xs font-medium text-slate-400">ข้อมูลสด</span>
+                <span className="text-xs font-medium text-slate-400">สด</span>
               </div>
 
               <ul className="mt-4 space-y-4">
@@ -220,17 +217,14 @@ export default function AdminDashboardPage() {
                     </li>
                   ))
                 ) : (
-                  <EmptyState
-                    title="ยังไม่มีกิจกรรมล่าสุด"
-                    description="เมื่อมีการเช็กชื่อ อนุมัติคำขอ หรืออัปเดตอุปกรณ์ ระบบจะแสดงที่นี่"
-                  />
+                  <EmptyState title="ยังไม่มีกิจกรรมล่าสุด" description="เมื่อมีการเช็กชื่อ อนุมัติคำขอ หรืออัปเดตอุปกรณ์ ระบบจะแสดงที่นี่" />
                 )}
               </ul>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
               <div className="flex items-center justify-between gap-4">
-                <h3 className="text-sm font-semibold text-white">งานสำคัญวันนี้</h3>
+                <h3 className="text-sm font-semibold text-white">งานวันนี้</h3>
                 <span className="text-xs font-medium text-slate-400">วันนี้</span>
               </div>
 
@@ -243,10 +237,7 @@ export default function AdminDashboardPage() {
                     </li>
                   ))
                 ) : (
-                  <EmptyState
-                    title="ยังไม่มีงานสำคัญ"
-                    description="รายการคำขอ การแจ้งเตือน และงานที่ต้องติดตามจะแสดงในส่วนนี้"
-                  />
+                  <EmptyState title="ยังไม่มีงานสำคัญ" description="คำขอ การแจ้งเตือน และงานติดตามจะแสดงในส่วนนี้" />
                 )}
               </ul>
             </div>
@@ -254,15 +245,15 @@ export default function AdminDashboardPage() {
         </SectionCard>
 
         <SectionCard
-          title="คิวงานที่ต้องติดตาม"
-          description="สิ่งที่ผู้ดูแลระบบควรตรวจสอบในขณะนี้"
+          title="คิวติดตาม"
+          description="สิ่งที่ควรตรวจสอบตอนนี้"
           className="border border-white/10 bg-[#10172a]/90 shadow-[0_18px_40px_rgba(3,7,18,0.35)] backdrop-blur"
         >
-          <div className="space-y-4">
+          <div className="grid gap-4">
             <div className="rounded-2xl border border-amber-300/15 bg-gradient-to-br from-[#141a32] to-[#0f1528] p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium text-white">คำขอที่รออนุมัติ</p>
+                  <p className="text-sm font-medium text-white">คำขอรออนุมัติ</p>
                   <p className="mt-1 text-sm text-slate-400">รวมคำขอลาและรายการที่ต้องตรวจสอบ</p>
                 </div>
                 <StatusBadge variant="warning" label={`${approvalQueueCount} รายการ`} />
@@ -272,17 +263,12 @@ export default function AdminDashboardPage() {
             <div className="rounded-2xl border border-sky-400/15 bg-gradient-to-br from-[#141a32] to-[#0f1528] p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium text-white">อุปกรณ์ที่พร้อมใช้งาน</p>
+                  <p className="text-sm font-medium text-white">อุปกรณ์พร้อมใช้งาน</p>
                   <p className="mt-1 text-sm text-slate-400">ติดตามสถานะเครื่องและการซิงก์ข้อมูล</p>
                 </div>
                 <StatusBadge variant="success" label={`${onlineDeviceCount} เครื่อง`} />
               </div>
             </div>
-
-            <EmptyState
-              title="ข้อมูลเชิงลึกเพิ่มเติมจะแสดงที่นี่"
-              description="เมื่อมีข้อมูลเพียงพอ ระบบจะแสดงแนวโน้มการมาสาย ภาระงานลา และคุณภาพการใช้งานอุปกรณ์"
-            />
           </div>
         </SectionCard>
       </section>

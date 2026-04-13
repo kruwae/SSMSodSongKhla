@@ -10,7 +10,7 @@ const fallbackStats = [
   { label: 'Requests', value: '—' },
   { label: 'Submitted', value: '—' },
   { label: 'Approved', value: '—' },
-  { label: 'Pending review', value: '—' },
+  { label: 'Pending', value: '—' },
 ]
 
 export default function AdminLeavesPage(): JSX.Element {
@@ -26,10 +26,7 @@ export default function AdminLeavesPage(): JSX.Element {
         { label: 'Requests', value: String(leaves.length) },
         { label: 'Submitted', value: String(leaves.filter((leave) => leave.status === 'submitted').length) },
         { label: 'Approved', value: String(leaves.filter((leave) => leave.status === 'approved').length) },
-        {
-          label: 'Pending review',
-          value: String(leaves.filter((leave) => leave.status === 'submitted').length),
-        },
+        { label: 'Pending', value: String(leaves.filter((leave) => leave.status === 'submitted').length) },
       ]
     : fallbackStats
 
@@ -37,7 +34,7 @@ export default function AdminLeavesPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <SectionCard title="Leave workflow" description="Track approvals, decisions, and upcoming absences across the team.">
+      <SectionCard title="Leave workflow" description="Track approvals, decisions, and upcoming absences.">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {leaveStats.map((stat) => (
             <div key={stat.label} className="rounded-2xl border border-white/8 bg-white/5 p-4">
@@ -64,7 +61,7 @@ export default function AdminLeavesPage(): JSX.Element {
         ) : isEmpty ? (
           <EmptyState title="No leave requests" description="Employee leave submissions will appear here for review." />
         ) : (
-          <div className="space-y-3">
+          <div className="grid gap-3 xl:grid-cols-2">
             {leaves.map((leave) => (
               <div
                 key={leave.id}
