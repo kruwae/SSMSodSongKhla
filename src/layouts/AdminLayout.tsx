@@ -15,11 +15,11 @@ const adminNavItems: NavigationItem[] = [
 
 export default function AdminLayout() {
   return (
-    <div className="grid min-h-screen lg:grid-cols-[280px_minmax(0,1fr)]">
+    <div className="app-shell">
       <AppSidebar title="Admin Console" items={adminNavItems} footer="Manage offices, employees, and records" />
-      <div className="flex min-h-screen flex-col bg-slate-50">
+      <div className="app-shell__content">
         <AppHeader title="Admin Portal" subtitle="Operations, approval workflows, and attendance oversight" />
-        <main className="flex-1 p-6">
+        <main className="app-main">
           <Outlet />
         </main>
       </div>

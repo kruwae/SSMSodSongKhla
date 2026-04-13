@@ -12,11 +12,11 @@ const employeeNavItems: NavigationItem[] = [
 
 export default function EmployeeLayout() {
   return (
-    <div className="grid min-h-screen lg:grid-cols-[280px_minmax(0,1fr)]">
+    <div className="app-shell">
       <AppSidebar title="Employee Portal" items={employeeNavItems} footer="Clock in, manage leave, and update your profile" />
-      <div className="flex min-h-screen flex-col bg-slate-50">
+      <div className="app-shell__content">
         <AppHeader title="Employee Portal" subtitle="Access attendance and leave tools from one place" />
-        <main className="flex-1 p-6">
+        <main className="app-main">
           <Outlet />
         </main>
       </div>
