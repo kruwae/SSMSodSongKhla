@@ -1,39 +1,47 @@
 import { useQuery } from '@tanstack/react-query'
 import EmptyState from '../../components/EmptyState'
 import SectionCard from '../../components/SectionCard'
-import type { NotificationSummary } from '../../services/supabaseData'
-import { getAdminNotifications } from '../../services/supabaseData'
+import StatusBadge from '../../components/StatusBadge'
+import { getAdminNotifications, type NotificationSummary } from '../../services/supabaseData'
 import { queryKeys } from '../../store/queryKeys'
 
 const fallbackStats = [
-  { label: 'Total', value: '—' },
-  { label: 'Unread', value: '—' },
-  { label: 'Admin', value: '—' },
-  { label: 'System', value: '—' },
+  { label: 'แจ้งเตือนทั้งหมด', value: '—' },
+  { label: 'ยังไม่อ่าน', value: '—' },
+  { label: 'อ่านแล้ว', value: '—' },
+  { label: 'ประเภท', value: '—' },
 ]
 
-export default function AdminNotificationsPage(): JSX.Element {
+export default function AdminNotificationsPage() {
   const notificationsQuery = useQuery({
     queryKey: queryKeys.admin.notifications,
     queryFn: getAdminNotifications,
   })
 
-  const notifications: NotificationSummary[] = notificationsQuery.data ?? []
+  const notifications: NotificationSummary[] = notificationsQuery.data?.data ?? []
 
   const notificationStats = notificationsQuery.data
     ? [
-        { label: 'Total', value: String(notifications.length) },
-        { label: 'Unread', value: String(notifications.filter((item) => !item.isRead).length) },
-        { label: 'Admin', value: String(notifications.filter((item) => item.category === 'admin').length) },
-        { label: 'System', value: String(notifications.filter((item) => item.category === 'system').length) },
+        { label: 'แจ้งเตือนทั้งหมด', value: String(notifications.length) },
+        { label: 'ยังไม่อ่าน', value: String(notifications.filter((item) => !item.isRead).length) },
+        { label: 'อ่านแล้ว', value: String(notifications.filter((item) => item.isRead).length) },
+        { label: 'ประเภท', value: String(new Set(notifications.map((item) => item.category).filter(Boolean)).size) },
       ]
     : fallbackStats
 
   const isEmpty = !notificationsQuery.isLoading && !notificationsQuery.isError && notifications.length === 0
 
+  const getCategoryLabel = (category: NotificationSummary['category']) => {
+    if (category === 'attendance') return 'การลงเวลา'
+    if (category === 'leave') return 'การลา'
+    if (category === 'device') return 'อุปกรณ์'
+    if (category === 'admin') return 'ผู้ดูแลระบบ'
+    return 'ระบบ'
+  }
+
   return (
-    <div className="space-y-6">
-      <SectionCard title="Notification center" description="System messages, approval alerts, and workflow updates in one view.">
+    <div className="space-y-5">
+      <SectionCard title="ภาพรวมการแจ้งเตือน" description="สรุปจำนวนการแจ้งเตือน สถานะการอ่าน และหมวดหมู่ที่ใช้งานในระบบ">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {notificationStats.map((stat) => (
             <div key={stat.label} className="rounded-2xl border border-white/8 bg-white/5 p-4">
@@ -45,45 +53,44 @@ export default function AdminNotificationsPage(): JSX.Element {
       </SectionCard>
 
       <SectionCard
-        title="Notifications"
-        description="Inbox for system events and approval actions."
+        title="รายการแจ้งเตือน"
+        description="เปลี่ยนเป็นการ์ด div เรียงแนวนอน ช่วยให้ดูหัวข้อ เนื้อหา และสถานะได้สั้นและชัดขึ้น"
         actions={
           <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
-            <span className="h-2 w-2 rounded-full bg-amber-400" />
-            Priority feed
+            <span className="h-2 w-2 rounded-full bg-sky-400" />
+            ข้อมูลสด
           </div>
         }
       >
         {notificationsQuery.isLoading ? (
-          <EmptyState title="Loading notifications" description="Fetching system notifications from Supabase." />
+          <EmptyState title="กำลังโหลดการแจ้งเตือน" description="ระบบกำลังดึงข้อมูลจาก Supabase" />
         ) : notificationsQuery.isError ? (
-          <EmptyState title="Unable to load notifications" description="Please check the Supabase connection and try again." />
+          <EmptyState title="ไม่สามารถโหลดการแจ้งเตือนได้" description="กรุณาตรวจสอบการเชื่อมต่อฐานข้อมูลแล้วลองใหม่อีกครั้ง" />
         ) : isEmpty ? (
-          <EmptyState title="No notifications" description="System messages and workflow alerts will appear here." />
+          <EmptyState title="ยังไม่มีการแจ้งเตือน" description="เมื่อระบบมีการแจ้งเตือน ข้อมูลจะปรากฏในส่วนนี้" />
         ) : (
-          <div className="space-y-3">
+          <div className="grid gap-4 lg:grid-cols-2">
             {notifications.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.03] p-4 shadow-[0_12px_30px_rgba(6,8,20,0.22)]"
-              >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-300">{item.category}</p>
-                    <h3 className="mt-2 text-lg font-semibold tracking-tight text-white">{item.title}</h3>
-                    <p className="mt-2 text-sm text-slate-300">{item.body}</p>
+              <div key={item.id} className="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-semibold tracking-tight text-white">{item.title}</p>
+                    <p className="mt-1 text-sm text-slate-300">{getCategoryLabel(item.category)}</p>
+                    <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">
+                      {item.sentAt ? new Date(item.sentAt).toLocaleString('th-TH') : 'ยังไม่ระบุเวลา'}
+                    </p>
                   </div>
-                  <div className="text-left sm:text-right">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset shadow-sm backdrop-blur-sm ${
-                        item.isRead
-                          ? 'bg-slate-500/10 text-slate-300 ring-slate-400/20'
-                          : 'bg-sky-500/10 text-sky-200 ring-sky-400/20'
-                      }`}
-                    >
-                      {item.isRead ? 'Read' : 'Unread'}
-                    </span>
-                    <p className="mt-2 text-xs text-slate-500">{item.sentAt ? new Date(item.sentAt).toLocaleString() : '—'}</p>
+                  <StatusBadge variant={item.isRead ? 'neutral' : 'warning'} label={item.isRead ? 'อ่านแล้ว' : 'ยังไม่อ่าน'} />
+                </div>
+
+                <div className="mt-4 grid gap-3">
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">รายละเอียด</p>
+                    <p className="mt-1 text-sm text-slate-200">{item.body}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">ลิงก์ปลายทาง</p>
+                    <p className="mt-1 text-sm text-slate-200">{item.actionUrl ?? '—'}</p>
                   </div>
                 </div>
               </div>

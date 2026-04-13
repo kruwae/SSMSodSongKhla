@@ -2,39 +2,38 @@ import { useQuery } from '@tanstack/react-query'
 import EmptyState from '../../components/EmptyState'
 import SectionCard from '../../components/SectionCard'
 import StatusBadge from '../../components/StatusBadge'
-import type { DeviceSummary } from '../../types/app'
-import { getAdminDevices } from '../../services/supabaseData'
+import { getAdminDevices, type DeviceSummary } from '../../services/supabaseData'
 import { queryKeys } from '../../store/queryKeys'
 
 const fallbackStats = [
-  { label: 'Devices', value: '—' },
-  { label: 'Approved', value: '—' },
-  { label: 'Pending', value: '—' },
-  { label: 'Offline', value: '—' },
+  { label: 'อุปกรณ์ทั้งหมด', value: '—' },
+  { label: 'ยืนยันแล้ว', value: '—' },
+  { label: 'ยังไม่ยืนยัน', value: '—' },
+  { label: 'แพลตฟอร์ม', value: '—' },
 ]
 
-export default function AdminDevicesPage(): JSX.Element {
+export default function AdminDevicesPage() {
   const devicesQuery = useQuery({
-    queryKey: queryKeys.admin.devices(),
+    queryKey: queryKeys.admin.devices,
     queryFn: getAdminDevices,
   })
 
-  const devices: DeviceSummary[] = devicesQuery.data ?? []
+  const devices: DeviceSummary[] = devicesQuery.data?.data ?? []
 
   const deviceStats = devicesQuery.data
     ? [
-        { label: 'Devices', value: String(devices.length) },
-        { label: 'Approved', value: String(devices.filter((device) => device.status === 'approved').length) },
-        { label: 'Pending', value: String(devices.filter((device) => device.status === 'pending').length) },
-        { label: 'Offline', value: String(devices.filter((device) => !device.lastSeenAt).length) },
+        { label: 'อุปกรณ์ทั้งหมด', value: String(devices.length) },
+        { label: 'ยืนยันแล้ว', value: String(devices.filter((device) => device.isVerified).length) },
+        { label: 'ยังไม่ยืนยัน', value: String(devices.filter((device) => !device.isVerified).length) },
+        { label: 'แพลตฟอร์ม', value: String(new Set(devices.map((device) => device.platform).filter(Boolean)).size) },
       ]
     : fallbackStats
 
   const isEmpty = !devicesQuery.isLoading && !devicesQuery.isError && devices.length === 0
 
   return (
-    <div className="space-y-6">
-      <SectionCard title="Device approvals" description="Manage capture devices, connectivity, and access readiness.">
+    <div className="space-y-5">
+      <SectionCard title="ภาพรวมอุปกรณ์" description="สรุปจำนวนอุปกรณ์ สถานะการยืนยัน และความหลากหลายของแพลตฟอร์ม">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {deviceStats.map((stat) => (
             <div key={stat.label} className="rounded-2xl border border-white/8 bg-white/5 p-4">
@@ -46,40 +45,47 @@ export default function AdminDevicesPage(): JSX.Element {
       </SectionCard>
 
       <SectionCard
-        title="Devices"
-        description="Approve devices and monitor connectivity from the queue."
+        title="รายการอุปกรณ์"
+        description="แสดงอุปกรณ์ที่ผูกกับผู้ใช้งานในรูปแบบการ์ดแนวนอน อ่านง่าย และตรวจสอบสถานะได้เร็ว"
         actions={
-          <div className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">
-            Approval queue
+          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
+            <span className="h-2 w-2 rounded-full bg-sky-400" />
+            ซิงก์แล้ว
           </div>
         }
       >
         {devicesQuery.isLoading ? (
-          <EmptyState title="Loading devices" description="Fetching device approvals and connectivity data from Supabase." />
+          <EmptyState title="กำลังโหลดข้อมูลอุปกรณ์" description="ระบบกำลังดึงข้อมูลจาก Supabase" />
         ) : devicesQuery.isError ? (
-          <EmptyState title="Unable to load devices" description="Please check the Supabase connection and try again." />
+          <EmptyState title="ไม่สามารถโหลดข้อมูลอุปกรณ์ได้" description="กรุณาตรวจสอบการเชื่อมต่อฐานข้อมูลแล้วลองใหม่อีกครั้ง" />
         ) : isEmpty ? (
-          <EmptyState title="No devices yet" description="Registered check-in devices and approvals will appear here." />
+          <EmptyState title="ยังไม่มีข้อมูลอุปกรณ์" description="เมื่อมีการเชื่อมอุปกรณ์ ข้อมูลจะปรากฏในส่วนนี้" />
         ) : (
-          <div className="grid gap-3 xl:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2">
             {devices.map((device) => (
-              <div
-                key={device.id}
-                className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.03] p-4 shadow-[0_12px_30px_rgba(6,8,20,0.22)]"
-              >
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div key={device.id} className="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
+                <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-300">Capture device</p>
-                    <h3 className="mt-2 text-lg font-semibold tracking-tight text-white">{device.name}</h3>
-                    <p className="mt-1 text-sm text-slate-400">{device.officeName}</p>
+                    <p className="font-semibold tracking-tight text-white">{device.deviceName ?? 'ไม่ระบุชื่ออุปกรณ์'}</p>
+                    <p className="mt-1 text-sm text-slate-300">{device.profileName ?? 'ยังไม่ผูกกับผู้ใช้งาน'}</p>
+                    <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">{device.platform ?? 'ไม่ระบุแพลตฟอร์ม'}</p>
                   </div>
-                  <div className="text-left sm:text-right">
-                    <StatusBadge
-                      variant={device.status === 'approved' ? 'success' : device.status === 'pending' ? 'warning' : 'danger'}
-                      label={device.status}
-                    />
-                    <p className="mt-2 text-xs text-slate-400">
-                      {device.lastSeenAt ? `Last seen ${new Date(device.lastSeenAt).toLocaleString()}` : 'Never seen online'}
+                  <StatusBadge variant={device.isVerified ? 'success' : 'warning'} label={device.isVerified ? 'ยืนยันแล้ว' : 'รอยืนยัน'} />
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">ผู้ใช้งาน</p>
+                    <p className="mt-1 text-sm text-slate-200">{device.profileName ?? 'ยังไม่กำหนด'}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">แพลตฟอร์ม</p>
+                    <p className="mt-1 text-sm text-slate-200">{device.platform ?? '—'}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 sm:col-span-2">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">ใช้งานล่าสุด</p>
+                    <p className="mt-1 text-sm text-slate-200">
+                      {device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString('th-TH') : 'ยังไม่มีข้อมูล'}
                     </p>
                   </div>
                 </div>
