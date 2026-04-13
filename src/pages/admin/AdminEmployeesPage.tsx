@@ -2,39 +2,38 @@ import { useQuery } from '@tanstack/react-query'
 import EmptyState from '../../components/EmptyState'
 import SectionCard from '../../components/SectionCard'
 import StatusBadge from '../../components/StatusBadge'
-import type { EmployeeSummary } from '../../types/app'
-import { getAdminEmployees } from '../../services/supabaseData'
+import { getAdminEmployees, type EmployeeSummary } from '../../services/supabaseData'
 import { queryKeys } from '../../store/queryKeys'
 
 const fallbackStats = [
-  { label: 'Total', value: '—' },
-  { label: 'Active', value: '—' },
-  { label: 'Pending', value: '—' },
-  { label: 'Offices', value: '—' },
+  { label: 'บุคลากรทั้งหมด', value: '—' },
+  { label: 'เปิดใช้งาน', value: '—' },
+  { label: 'ผู้ดูแลระบบ', value: '—' },
+  { label: 'สำนักงาน', value: '—' },
 ]
 
-export default function AdminEmployeesPage(): JSX.Element {
+export default function AdminEmployeesPage() {
   const employeesQuery = useQuery({
-    queryKey: queryKeys.admin.employees(),
+    queryKey: queryKeys.admin.employees,
     queryFn: getAdminEmployees,
   })
 
-  const employees: EmployeeSummary[] = employeesQuery.data ?? []
+  const employees: EmployeeSummary[] = employeesQuery.data?.data ?? []
 
   const employeeStats = employeesQuery.data
     ? [
-        { label: 'Total', value: String(employees.length) },
-        { label: 'Active', value: String(employees.filter((employee) => employee.status === 'active').length) },
-        { label: 'Pending', value: String(employees.filter((employee) => employee.status === 'pending').length) },
-        { label: 'Offices', value: String(new Set(employees.map((employee) => employee.officeName).filter(Boolean)).size) },
+        { label: 'บุคลากรทั้งหมด', value: String(employees.length) },
+        { label: 'เปิดใช้งาน', value: String(employees.filter((employee) => employee.isActive).length) },
+        { label: 'ผู้ดูแลระบบ', value: String(employees.filter((employee) => employee.role === 'admin').length) },
+        { label: 'สำนักงาน', value: String(new Set(employees.map((employee) => employee.officeName).filter(Boolean)).size) },
       ]
     : fallbackStats
 
   const isEmpty = !employeesQuery.isLoading && !employeesQuery.isError && employees.length === 0
 
   return (
-    <div className="space-y-6">
-      <SectionCard title="Employee directory" description="Track onboarding, office assignment, and access readiness.">
+    <div className="space-y-5">
+      <SectionCard title="ภาพรวมบุคลากร" description="สรุปจำนวนบุคลากร สถานะการใช้งาน และการกระจายตามสำนักงาน">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {employeeStats.map((stat) => (
             <div key={stat.label} className="rounded-2xl border border-white/8 bg-white/5 p-4">
@@ -46,55 +45,56 @@ export default function AdminEmployeesPage(): JSX.Element {
       </SectionCard>
 
       <SectionCard
-        title="Employees"
-        description="Directory and onboarding overview with quick status checks."
+        title="รายชื่อบุคลากร"
+        description="ดูข้อมูลผู้ใช้งาน บทบาท สำนักงาน และสถานะการใช้งานแบบย่อ"
         actions={
           <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
             <span className="h-2 w-2 rounded-full bg-sky-400" />
-            Synced
+            ซิงก์แล้ว
           </div>
         }
       >
         {employeesQuery.isLoading ? (
-          <EmptyState title="Loading employees" description="Fetching directory data from Supabase." />
+          <EmptyState title="กำลังโหลดข้อมูลบุคลากร" description="ระบบกำลังดึงข้อมูลจาก Supabase" />
         ) : employeesQuery.isError ? (
-          <EmptyState title="Unable to load employees" description="Please check the Supabase connection and try again." />
+          <EmptyState title="ไม่สามารถโหลดข้อมูลบุคลากรได้" description="กรุณาตรวจสอบการเชื่อมต่อฐานข้อมูลแล้วลองใหม่อีกครั้ง" />
         ) : isEmpty ? (
-          <EmptyState title="No employees found" description="Add employees to start tracking attendance, leave, and device access." />
+          <EmptyState title="ยังไม่มีข้อมูลบุคลากร" description="เมื่อเพิ่มผู้ใช้งานแล้ว ข้อมูลจะปรากฏในส่วนนี้" />
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-white/10">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-white/10">
-                <thead className="bg-white/[0.03]">
-                  <tr className="text-left text-xs uppercase tracking-[0.2em] text-slate-400">
-                    <th className="py-3.5 pl-4 pr-4 font-semibold">Name</th>
-                    <th className="py-3.5 pr-4 font-semibold">Email</th>
-                    <th className="py-3.5 pr-4 font-semibold">Office</th>
-                    <th className="py-3.5 pr-4 font-semibold">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/10 bg-slate-950/30">
-                  {employees.map((employee) => (
-                    <tr key={employee.id} className="text-sm transition-colors hover:bg-white/[0.03]">
-                      <td className="py-4 pl-4 pr-4">
-                        <div>
-                          <p className="font-semibold tracking-tight text-white">{employee.fullName}</p>
-                          <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">{employee.role}</p>
-                        </div>
-                      </td>
-                      <td className="py-4 pr-4 text-slate-300">{employee.email}</td>
-                      <td className="py-4 pr-4 text-slate-300">{employee.officeName ?? 'Unassigned'}</td>
-                      <td className="py-4 pr-4">
-                        <StatusBadge
-                          variant={employee.status === 'active' ? 'success' : employee.status === 'pending' ? 'warning' : 'neutral'}
-                          label={employee.status}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {employees.map((employee) => (
+              <div key={employee.id} className="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-semibold tracking-tight text-white">{employee.fullName}</p>
+                    <p className="mt-1 text-sm text-slate-300">{employee.email}</p>
+                    <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">
+                      {employee.role === 'admin' ? 'ผู้ดูแลระบบ' : 'บุคลากร'}
+                    </p>
+                  </div>
+                  <StatusBadge variant={employee.isActive ? 'success' : 'neutral'} label={employee.isActive ? 'ใช้งานอยู่' : 'ปิดใช้งาน'} />
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">สำนักงาน</p>
+                    <p className="mt-1 text-sm text-slate-200">{employee.officeName ?? 'ยังไม่กำหนด'}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">หน่วยงาน</p>
+                    <p className="mt-1 text-sm text-slate-200">{employee.departmentName ?? 'ยังไม่กำหนด'}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">รหัสบุคลากร</p>
+                    <p className="mt-1 text-sm text-slate-200">{employee.employeeCode ?? '—'}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">เบอร์โทร</p>
+                    <p className="mt-1 text-sm text-slate-200">{employee.phone ?? '—'}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </SectionCard>
